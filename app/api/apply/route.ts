@@ -1,42 +1,52 @@
 import { calculateCompatibility } from "@/lib/compatibility";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+
 import {
   ApplicationStatus,
   PersonalityType,
   RelationshipIntent,
 } from "@prisma/client";
+
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
+    // Get the currently signed-in Clerk user
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: "You must be signed in to submit an application.",
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     const compatibility = calculateCompatibility({
-    communication: body.communication,
-    conflictStyle: body.conflictStyle,
-
-    workoutFrequency: body.workoutFrequency,
-    diet: body.diet,
-    weekendPreference: body.weekendPreference,
-    travels: body.travels,
-
-    personality: body.personality
-     ? (body.personality as PersonalityType)
-    : null,
-
-    relationshipIntent: body.relationshipIntent
-     ? (body.relationshipIntent as RelationshipIntent)
-     : null,
-
-    longTermGoals: body.longTermGoals,
-    relationshipNeeds: body.relationshipNeeds,
-    values: body.values,
-
-    fryProtocol: body.fryProtocol,
-    fineResponse: body.fineResponse,
-    readResponse: body.readResponse,
-    toiletProtocol: body.toiletProtocol,
-    whyGoodBoyfriend: body.whyGoodBoyfriend,
+      communication: body.communication,
+      conflictStyle: body.conflictStyle,
+      workoutFrequency: body.workoutFrequency,
+      diet: body.diet,
+      weekendPreference: body.weekendPreference,
+      travels: body.travels,
+      personality: body.personality
+        ? (body.personality as PersonalityType)
+        : null,
+      relationshipIntent: body.relationshipIntent
+        ? (body.relationshipIntent as RelationshipIntent)
+        : null,
+      longTermGoals: body.longTermGoals,
+      relationshipNeeds: body.relationshipNeeds,
+      values: body.values,
+      fryProtocol: body.fryProtocol,
+      fineResponse: body.fineResponse,
+      readResponse: body.readResponse,
+      toiletProtocol: body.toiletProtocol,
+      whyGoodBoyfriend: body.whyGoodBoyfriend,
     });
 
     if (!body.firstName || !body.email || !body.age || !body.city) {
@@ -49,12 +59,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingCandidate =
-      await prisma.candidate.findUnique({
-        where: {
-          email: body.email,
-        },
-      });
+    const existingCandidate = await prisma.candidate.findUnique({
+      where: {
+        email: body.email,
+      },
+    });
 
     if (existingCandidate) {
       return NextResponse.json(
@@ -66,94 +75,103 @@ export async function POST(request: Request) {
       );
     }
 
-    const candidate = await prisma.$transaction(
-      async (tx) => {
-        const createdCandidate =
-          await tx.candidate.create({
-            data: {
-              firstName: body.firstName,
-              lastName: body.lastName || null,
-              email: body.email,
-              age: Number(body.age),
-              city: body.city,
-              height: body.height || null,
-              zodiac: body.zodiac || null,
-              occupation: body.occupation || null,
-              photoUrl: body.photoUrl || null,
+    const candidate = await prisma.$transaction(async (tx) => {
+      const createdCandidate = await tx.candidate.create({
+        data: {
+          // Clerk ownership
+          clerkUserId: userId,
 
-              workoutFrequency:
-                body.workoutFrequency || null,
-              diet: body.diet || null,
-              weekendPreference:
-                body.weekendPreference || null,
-              travels: body.travels || null,
-              hasPets:
-                typeof body.hasPets === "boolean"
-                  ? body.hasPets
-                  : null,
-              petType: body.petType || null,
+          // Basic information
+          firstName: body.firstName,
+          lastName: body.lastName || null,
+          email: body.email,
+          age: Number(body.age),
+          city: body.city,
+          height: body.height || null,
+          zodiac: body.zodiac || null,
+          occupation: body.occupation || null,
+          photoUrl: body.photoUrl || null,
 
-              personality:
-                body.personality
-                  ? (body.personality as PersonalityType)
-                  : null,
+          // Lifestyle
+          workoutFrequency:
+            body.workoutFrequency || null,
+          diet: body.diet || null,
+          weekendPreference:
+            body.weekendPreference || null,
+          travels: body.travels || null,
+          hasPets:
+            typeof body.hasPets === "boolean"
+              ? body.hasPets
+              : null,
+          petType: body.petType || null,
 
-              conflictStyle:
-                body.conflictStyle || null,
-              communication:
-                body.communication || null,
-              friendsDescribe:
-                body.friendsDescribe || null,
+          // Personality
+          personality: body.personality
+            ? (body.personality as PersonalityType)
+            : null,
+          conflictStyle:
+            body.conflictStyle || null,
+          communication:
+            body.communication || null,
+          friendsDescribe:
+            body.friendsDescribe || null,
 
-              relationshipIntent:
-                body.relationshipIntent
-                  ? (body.relationshipIntent as RelationshipIntent)
-                  : null,
+          // Relationship
+          relationshipIntent:
+            body.relationshipIntent
+              ? (body.relationshipIntent as RelationshipIntent)
+              : null,
+          loveLanguages:
+            body.loveLanguages || null,
+          values: body.values || null,
+          longTermGoals:
+            body.longTermGoals || null,
+          relationshipNeeds:
+            body.relationshipNeeds || null,
 
-              loveLanguages:
-                body.loveLanguages || null,
-              values: body.values || null,
-              longTermGoals:
-                body.longTermGoals || null,
-              relationshipNeeds:
-                body.relationshipNeeds || null,
+          // Important questions
+          fryProtocol:
+            body.fryProtocol || null,
+          fineResponse:
+            body.fineResponse || null,
+          readResponse:
+            body.readResponse || null,
+          toiletProtocol:
+            body.toiletProtocol || null,
+          whyGoodBoyfriend:
+            body.whyGoodBoyfriend || null,
+          whatMakesDifferent:
+            body.whatMakesDifferent || null,
+          anythingElse:
+            body.anythingElse || null,
 
-              fryProtocol:
-                body.fryProtocol || null,
-              fineResponse:
-                body.fineResponse || null,
-              readResponse:
-                body.readResponse || null,
-              toiletProtocol:
-                body.toiletProtocol || null,
-              whyGoodBoyfriend:
-                body.whyGoodBoyfriend || null,
-              whatMakesDifferent:
-                body.whatMakesDifferent || null,
-              anythingElse:
-                body.anythingElse || null,
+          // Status
+          status: ApplicationStatus.APPLIED,
 
-              status: ApplicationStatus.APPLIED,
+          // Compatibility scores
+          compatibilityScore:
+            compatibility.compatibilityScore,
+          communicationScore:
+            compatibility.communicationScore,
+          lifestyleScore:
+            compatibility.lifestyleScore,
+          valuesScore:
+            compatibility.valuesScore,
+          humorScore:
+            compatibility.humorScore,
+        },
+      });
 
-              compatibilityScore: compatibility.compatibilityScore,
-              communicationScore: compatibility.communicationScore,
-              lifestyleScore: compatibility.lifestyleScore,
-              valuesScore: compatibility.valuesScore,
-              humorScore: compatibility.humorScore,
-            },
-          });
+      await tx.applicationEvent.create({
+        data: {
+          candidateId: createdCandidate.id,
+          toStatus: ApplicationStatus.APPLIED,
+          note: "Application submitted.",
+        },
+      });
 
-        await tx.applicationEvent.create({
-          data: {
-            candidateId: createdCandidate.id,
-            toStatus: ApplicationStatus.APPLIED,
-            note: "Application submitted.",
-          },
-        });
-
-        return createdCandidate;
-      }
-    );
+      return createdCandidate;
+    });
 
     return NextResponse.json(
       {
@@ -163,7 +181,10 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Application submission error:", error);
+    console.error(
+      "Application submission error:",
+      error
+    );
 
     return NextResponse.json(
       {

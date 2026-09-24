@@ -1,7 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+
+import LogoutButton from "@/components/LogoutButton";
+
+import { notFound, redirect } from "next/navigation";
+
+import { auth } from "@clerk/nextjs/server";
+
 import Link from "next/link";
+
 import PhotoUpload from "./PhotoUpload";
+
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 
 const display = Bricolage_Grotesque({
@@ -39,20 +47,26 @@ const statusLabels: Record<string, string> = {
 };
 
 const stageDescriptions: Record<string, string> = {
-  APPLIED: "Your application has successfully entered the pipeline.",
+  APPLIED:
+    "Your application has successfully entered the pipeline.",
   REVIEWING:
     "Someone is currently deciding whether you're boyfriend material.",
-  SHORTLISTED: "Okayyy, you've made it past the first cut.",
+  SHORTLISTED:
+    "Okayyy, you've made it past the first cut.",
   INTERVIEW_SCHEDULED:
     "Your interview is booked. Please bring your personality.",
   INTERVIEW_COMPLETED:
     "Interview done. Now we wait and pretend to be chill.",
-  DATE_SCHEDULED: "You've made it to the date stage. Interesting...",
-  DATE_COMPLETED: "The date happened. The committee is thinking.",
+  DATE_SCHEDULED:
+    "You've made it to the date stage. Interesting...",
+  DATE_COMPLETED:
+    "The date happened. The committee is thinking.",
   ACCEPTED:
     "Congratulations. You have successfully secured the position.",
-  REJECTED: "This application has been closed.",
-  WITHDRAWN: "This application was withdrawn.",
+  REJECTED:
+    "This application has been closed.",
+  WITHDRAWN:
+    "This application was withdrawn.",
 };
 
 function formatDate(date: Date) {
@@ -64,6 +78,7 @@ function formatDate(date: Date) {
 
 function getStageIndex(status: string) {
   if (status === "REJECTED" || status === "WITHDRAWN") return -1;
+
   return timeline.indexOf(status);
 }
 
@@ -72,10 +87,16 @@ function getProgress(status: string) {
 
   if (index < 0) return 0;
 
-  return Math.round((index / (timeline.length - 1)) * 100);
+  return Math.round(
+    (index / (timeline.length - 1)) * 100
+  );
 }
 
-function ScoreRing({ score }: { score: number | null }) {
+function ScoreRing({
+  score,
+}: {
+  score: number | null;
+}) {
   const r = 52;
   const c = 2 * Math.PI * r;
   const value = score ?? 0;
@@ -105,7 +126,9 @@ function ScoreRing({ score }: { score: number | null }) {
           strokeWidth="9"
           strokeLinecap="round"
           strokeDasharray={c}
-          strokeDashoffset={c - (c * value) / 100}
+          strokeDashoffset={
+            c - (c * value) / 100
+          }
         />
       </svg>
 
@@ -114,7 +137,9 @@ function ScoreRing({ score }: { score: number | null }) {
           {score ?? "—"}
 
           {score !== null && (
-            <span className="text-lg text-white/60">%</span>
+            <span className="text-lg text-white/60">
+              %
+            </span>
           )}
         </span>
       </div>
@@ -127,46 +152,97 @@ export default async function CandidatePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  /* ---------------------------------------------------------
+   * AUTHORIZATION
+   * --------------------------------------------------------- */
+
+  const { userId, sessionClaims } = await auth();
+
+  // Not logged in
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
+  // Get the candidate
   const { id } = await params;
 
-  const candidate = await prisma.candidate.findUnique({
-    where: { id },
-    include: {
-      interviews: {
-        orderBy: {
-          scheduledAt: "desc",
+  const candidate =
+    await prisma.candidate.findUnique({
+      where: { id },
+
+      include: {
+        interviews: {
+          orderBy: {
+            scheduledAt: "desc",
+          },
+        },
+
+        dates: {
+          orderBy: {
+            scheduledAt: "desc",
+          },
+        },
+
+        events: {
+          orderBy: {
+            createdAt: "desc",
+          },
         },
       },
+    });
 
-      dates: {
-        orderBy: {
-          scheduledAt: "desc",
-        },
-      },
+  if (!candidate) {
+    notFound();
+  }
 
-      events: {
-        orderBy: {
-          createdAt: "desc",
-        },
-      },
-    },
-  });
+  /* ---------------------------------------------------------
+   * ROLE CHECK
+   *
+   * ADMIN:
+   *   Can view every candidate.
+   *
+   * NORMAL USER:
+   *   Can only view their own candidate profile.
+   *
+   * Existing candidates created before Clerk integration have
+   * clerkUserId = null, so they can only be viewed by admins.
+   * --------------------------------------------------------- */
 
-  if (!candidate) notFound();
+  const role = sessionClaims?.metadata?.role;
+
+  const isAdmin = role === "ADMIN";
+
+  const isOwner =
+    candidate.clerkUserId === userId;
+
+  if (!isAdmin && !isOwner) {
+    redirect("/");
+  }
+
+  /* ---------------------------------------------------------
+   * PAGE DATA
+   * --------------------------------------------------------- */
 
   const progress = getProgress(candidate.status);
-  const currentStageIndex = getStageIndex(candidate.status);
 
-  const latestInterview = candidate.interviews[0];
+  const currentStageIndex =
+    getStageIndex(candidate.status);
+
+  const latestInterview =
+    candidate.interviews[0];
+
   const latestDate = candidate.dates[0];
 
   const isRejected =
     candidate.status === "REJECTED" ||
     candidate.status === "WITHDRAWN";
 
-  const isAccepted = candidate.status === "ACCEPTED";
+  const isAccepted =
+    candidate.status === "ACCEPTED";
 
-  const appId = candidate.id.slice(-6).toUpperCase();
+  const appId = candidate.id
+    .slice(-6)
+    .toUpperCase();
 
   return (
     <main
@@ -199,6 +275,8 @@ export default async function CandidatePage({
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-[#2a1626]/10 bg-[#fdf1f3]/85 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5 md:px-8">
+          
+          {/* Brand */}
           <Link
             href="/"
             className="rounded-md font-[family-name:var(--font-display)] text-lg font-bold tracking-tight outline-offset-4 hover:text-[#d9364f] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d9364f]"
@@ -206,12 +284,17 @@ export default async function CandidatePage({
             The Boyfriend Portal 💌
           </Link>
 
-          <p className="text-sm text-[#6b5566]">
-            Application{" "}
-            <span className="font-semibold text-[#2a1626]">
-              #{appId}
-            </span>
-          </p>
+          {/* Header actions */}
+          <div className="flex items-center gap-3">
+            <p className="hidden text-sm text-[#6b5566] sm:block">
+              Application{" "}
+              <span className="font-semibold text-[#2a1626]">
+                #{appId}
+              </span>
+            </p>
+
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
@@ -223,6 +306,7 @@ export default async function CandidatePage({
             <div className="flex flex-col gap-7 sm:flex-row sm:items-center">
               {/* Candidate Photo */}
               <PhotoUpload
+                candidateId={candidate.id}
                 currentPhotoUrl={candidate.photoUrl}
                 firstName={candidate.firstName}
               />
@@ -234,8 +318,9 @@ export default async function CandidatePage({
                 </h1>
 
                 <p className="mt-5 max-w-md text-base leading-7 text-[#6b5566]">
-                  Welcome back to your very serious, completely
-                  legitimate boyfriend recruitment journey.
+                  Welcome back to your very serious,
+                  completely legitimate boyfriend
+                  recruitment journey.
                 </p>
 
                 <ul className="mt-7 flex flex-wrap gap-2 text-sm">
@@ -270,13 +355,16 @@ export default async function CandidatePage({
               }`}
               aria-hidden="true"
             >
-              {statusLabels[candidate.status] ?? candidate.status}
+              {statusLabels[candidate.status] ??
+                candidate.status}
             </div>
           </div>
 
           {/* Score */}
           <div className="flex items-center gap-6 rounded-3xl bg-[#2a1626] p-7 text-white md:w-[300px] md:flex-col md:items-start md:justify-between">
-            <ScoreRing score={candidate.compatibilityScore} />
+            <ScoreRing
+              score={candidate.compatibilityScore}
+            />
 
             <div>
               <p className="font-[family-name:var(--font-display)] text-lg font-bold">
@@ -284,8 +372,8 @@ export default async function CandidatePage({
               </p>
 
               <p className="mt-1 text-sm text-white/65">
-                Extremely scientific. Probably. Just for fun, not a
-                real assessment.
+                Extremely scientific. Probably. Just
+                for fun, not a real assessment.
               </p>
             </div>
           </div>
@@ -303,9 +391,10 @@ export default async function CandidatePage({
             </h2>
 
             <p className="mt-3 max-w-lg leading-7 text-white/90">
-              Congratulations. After extensive review, several
-              meetings, and absolutely no conflict of interest, you
-              have secured the position.
+              Congratulations. After extensive review,
+              several meetings, and absolutely no
+              conflict of interest, you have secured the
+              position.
             </p>
           </section>
         )}
@@ -317,8 +406,8 @@ export default async function CandidatePage({
             </h2>
 
             <p className="mt-2 max-w-lg text-[#6b5566]">
-              Thank you for applying. The committee has made its
-              extremely serious decision.
+              Thank you for applying. The committee has
+              made its extremely serious decision.
             </p>
           </section>
         )}
@@ -328,7 +417,8 @@ export default async function CandidatePage({
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight">
-                {statusLabels[candidate.status] ?? candidate.status}
+                {statusLabels[candidate.status] ??
+                  candidate.status}
               </h2>
 
               <p className="mt-2 max-w-xl leading-7 text-[#6b5566]">
@@ -362,15 +452,22 @@ export default async function CandidatePage({
             }`}
           >
             {timeline.map((stage, index) => {
-              const completed = currentStageIndex >= index;
-              const current = candidate.status === stage;
-              const last = index === timeline.length - 1;
+              const completed =
+                currentStageIndex >= index;
+
+              const current =
+                candidate.status === stage;
+
+              const last =
+                index === timeline.length - 1;
 
               return (
                 <li
                   key={stage}
                   className="flex gap-4"
-                  aria-current={current ? "step" : undefined}
+                  aria-current={
+                    current ? "step" : undefined
+                  }
                 >
                   <div className="flex flex-col items-center">
                     <span
@@ -382,7 +479,9 @@ export default async function CandidatePage({
                             : "bg-[#fdf1f3] text-[#6b5566]"
                       }`}
                     >
-                      {completed && !current ? "✓" : index + 1}
+                      {completed && !current
+                        ? "✓"
+                        : index + 1}
                     </span>
 
                     {!last && (
@@ -415,7 +514,8 @@ export default async function CandidatePage({
 
                     {current && (
                       <p className="mt-1 text-sm leading-6 text-[#6b5566]">
-                        You are here. {stageDescriptions[stage]}
+                        You are here.{" "}
+                        {stageDescriptions[stage]}
                       </p>
                     )}
                   </div>
@@ -466,11 +566,20 @@ export default async function CandidatePage({
               value={String(candidate.age)}
             />
 
-            <Detail label="City" value={candidate.city} />
+            <Detail
+              label="City"
+              value={candidate.city}
+            />
 
-            <Detail label="Height" value={candidate.height} />
+            <Detail
+              label="Height"
+              value={candidate.height}
+            />
 
-            <Detail label="Zodiac" value={candidate.zodiac} />
+            <Detail
+              label="Zodiac"
+              value={candidate.zodiac}
+            />
 
             <Detail
               label="Occupation"
@@ -586,7 +695,9 @@ function ScheduleCard({
               target="_blank"
               rel="noreferrer"
               className={`mt-auto rounded-xl px-5 py-3 text-center text-sm font-bold text-white outline-offset-2 transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#d9364f] ${
-                accent ? "bg-[#d9364f]" : "bg-[#2a1626]"
+                accent
+                  ? "bg-[#d9364f]"
+                  : "bg-[#2a1626]"
               }`}
             >
               {joinText} →
@@ -613,7 +724,9 @@ function Detail({
 
   return (
     <div className="border-t border-[#2a1626]/10 pt-3">
-      <dt className="text-sm text-[#6b5566]">{label}</dt>
+      <dt className="text-sm text-[#6b5566]">
+        {label}
+      </dt>
 
       <dd className="mt-0.5 font-semibold capitalize">
         {value}

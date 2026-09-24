@@ -56,7 +56,9 @@ enum DateStatus {
 }
 
 model Candidate {
-  id        String   @id @default(cuid())
+  id          String   @id @default(cuid())
+  clerkUserId String?  @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -121,28 +123,25 @@ model Candidate {
 }
 
 model AdminNote {
-  id        String   @id @default(cuid())
-  content   String
-  createdAt DateTime @default(now())
-
+  id          String    @id @default(cuid())
+  content     String
+  createdAt   DateTime  @default(now())
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model GreenFlag {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   description String
-  createdAt   DateTime @default(now())
-
+  createdAt   DateTime  @default(now())
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model RedFlag {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   description String
-  createdAt   DateTime @default(now())
-
+  createdAt   DateTime  @default(now())
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
@@ -155,9 +154,8 @@ model Interview {
   status      InterviewStatus @default(SCHEDULED)
   adminNotes  String?
   createdAt   DateTime        @default(now())
-
   candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate   Candidate      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model Date {
@@ -169,18 +167,16 @@ model Date {
   prompt       String?
   privateNotes String?
   createdAt    DateTime   @default(now())
-
-  candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidateId  String
+  candidate    Candidate  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model ApplicationEvent {
-  id         String             @id @default(cuid())
-  fromStatus ApplicationStatus?
-  toStatus   ApplicationStatus
-  note       String?
-  createdAt  DateTime           @default(now())
-
+  id          String            @id @default(cuid())
+  fromStatus  ApplicationStatus?
+  toStatus    ApplicationStatus
+  note        String?
+  createdAt   DateTime          @default(now())
   candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate   Candidate         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }

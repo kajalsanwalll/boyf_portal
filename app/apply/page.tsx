@@ -2,31 +2,46 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import {
+  useForm,
+  type UseFormRegisterReturn,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const formSchema = z.object({
   firstName: z.string().min(2, "Please enter your first name."),
+
   lastName: z.string().optional(),
+
   email: z.string().email("Please enter a valid email."),
+
   age: z.coerce
     .number()
     .min(18, "Applicants must be 18+.")
     .max(99, "Please enter a valid age."),
+
   city: z.string().min(2, "Please enter your city."),
+
   height: z.string().optional(),
+
   zodiac: z.string().optional(),
+
   occupation: z.string().optional(),
 
   // Cloudinary URL gets stored here
   photoUrl: z.string().optional(),
 
   workoutFrequency: z.string().optional(),
+
   diet: z.string().optional(),
+
   weekendPreference: z.string().optional(),
+
   travels: z.string().optional(),
+
   hasPets: z.boolean().optional(),
+
   petType: z.string().optional(),
 
   personality: z
@@ -34,7 +49,9 @@ const formSchema = z.object({
     .optional(),
 
   conflictStyle: z.string().optional(),
+
   communication: z.string().optional(),
+
   friendsDescribe: z.string().optional(),
 
   relationshipIntent: z
@@ -48,20 +65,44 @@ const formSchema = z.object({
     .optional(),
 
   loveLanguages: z.string().optional(),
+
   values: z.string().optional(),
+
   longTermGoals: z.string().optional(),
+
   relationshipNeeds: z.string().optional(),
 
   fryProtocol: z.string().optional(),
+
   fineResponse: z.string().optional(),
+
   readResponse: z.string().optional(),
+
   toiletProtocol: z.string().optional(),
+
   whyGoodBoyfriend: z.string().optional(),
+
   whatMakesDifferent: z.string().optional(),
+
   anythingElse: z.string().optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
+/*
+ * Important:
+ *
+ * z.coerce.number() has an INPUT type of unknown,
+ * but an OUTPUT type of number.
+ *
+ * Using z.infer<typeof formSchema> directly with useForm()
+ * can therefore cause a production TypeScript error.
+ *
+ * We explicitly tell react-hook-form:
+ *
+ * Input  -> z.input<typeof formSchema>
+ * Output -> z.output<typeof formSchema>
+ */
+type FormInput = z.input<typeof formSchema>;
+type FormData = z.output<typeof formSchema>;
 
 const steps = [
   "Basic Info",
@@ -77,8 +118,12 @@ export default function ApplyPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(
+    null
+  );
+
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   const [photoError, setPhotoError] = useState("");
 
   const {
@@ -88,8 +133,9 @@ export default function ApplyPage() {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm<FormInput, any, FormData>({
     resolver: zodResolver(formSchema),
+
     defaultValues: {
       hasPets: false,
     },
@@ -113,25 +159,32 @@ export default function ApplyPage() {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setPhotoError("Please upload a JPG, PNG, or WEBP image.");
+      setPhotoError(
+        "Please upload a JPG, PNG, or WEBP image."
+      );
+
       event.target.value = "";
+
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       setPhotoError("Image must be smaller than 5MB.");
+
       event.target.value = "";
+
       return;
     }
 
     // Local preview
     const previewUrl = URL.createObjectURL(file);
-    setPhotoPreview(previewUrl);
 
+    setPhotoPreview(previewUrl);
     setUploadingPhoto(true);
 
     try {
       const formData = new FormData();
+
       formData.append("file", file);
 
       const response = await fetch("/api/upload", {
@@ -142,7 +195,9 @@ export default function ApplyPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to upload photo.");
+        throw new Error(
+          result.error || "Failed to upload photo."
+        );
       }
 
       // Save Cloudinary URL into react-hook-form
@@ -160,9 +215,11 @@ export default function ApplyPage() {
       );
 
       setPhotoPreview(null);
+
       setValue("photoUrl", "");
     } finally {
       setUploadingPhoto(false);
+
       event.target.value = "";
     }
   }
@@ -177,26 +234,30 @@ export default function ApplyPage() {
   }
 
   async function nextStep() {
-  if (step >= steps.length - 1) return;
+    if (step >= steps.length - 1) {
+      return;
+    }
 
-  const fieldsByStep: (keyof FormData)[][] = [
-    ["firstName", "email", "age", "city"],
-    [],
-    [],
-    [],
-    [],
-  ];
+    const fieldsByStep: (keyof FormInput)[][] = [
+      ["firstName", "email", "age", "city"],
+      [],
+      [],
+      [],
+      [],
+    ];
 
-  const fields = fieldsByStep[step];
+    const fields = fieldsByStep[step];
 
-  if (fields.length > 0) {
-    const valid = await trigger(fields);
+    if (fields.length > 0) {
+      const valid = await trigger(fields);
 
-    if (!valid) return;
+      if (!valid) {
+        return;
+      }
+    }
+
+    setStep((current) => current + 1);
   }
-
-  setStep((current) => current + 1);
-}
 
   function previousStep() {
     setStep((current) => Math.max(current - 1, 0));
@@ -204,7 +265,10 @@ export default function ApplyPage() {
 
   async function submitApplication(data: FormData) {
     if (uploadingPhoto) {
-      alert("Please wait for your photo to finish uploading.");
+      alert(
+        "Please wait for your photo to finish uploading."
+      );
+
       return;
     }
 
@@ -213,23 +277,32 @@ export default function ApplyPage() {
     try {
       const response = await fetch("/api/apply", {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify(data),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result.error || "Failed to submit application.");
+        alert(
+          result.error ||
+            "Failed to submit application."
+        );
+
         return;
       }
 
       router.push(`/apply/success?id=${result.id}`);
     } catch (error) {
       console.error(error);
-      alert("Something went wrong while submitting.");
+
+      alert(
+        "Something went wrong while submitting."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -298,7 +371,9 @@ export default function ApplyPage() {
             <div
               className="h-full rounded-full bg-[#e94f64] transition-all"
               style={{
-                width: `${((step + 1) / steps.length) * 100}%`,
+                width: `${
+                  ((step + 1) / steps.length) * 100
+                }%`,
               }}
             />
           </div>
@@ -306,12 +381,25 @@ export default function ApplyPage() {
 
         {/* FORM */}
         <form
-  onSubmit={(event) => {
-    event.preventDefault();
-    handleSubmit(submitApplication)(event);
-  }}
-  className="rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8"
->
+          onSubmit={handleSubmit(submitApplication)}
+          onKeyDown={(event) => {
+            /*
+             * Prevent accidental implicit form submission
+             * when pressing Enter inside a normal input.
+             *
+             * Textareas are intentionally excluded so users
+             * can press Enter while writing their answers.
+             */
+            if (
+              event.key === "Enter" &&
+              event.target instanceof HTMLInputElement
+            ) {
+              event.preventDefault();
+            }
+          }}
+          className="rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8"
+        >
+
           {/* STEP 1 */}
           {step === 0 && (
             <StepContainer
@@ -397,6 +485,7 @@ export default function ApplyPage() {
                     className="input"
                   />
                 </Field>
+
               </div>
 
               {/* PHOTO UPLOAD */}
@@ -412,7 +501,9 @@ export default function ApplyPage() {
 
                 {!photoPreview ? (
                   <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#e8d9db] bg-[#fff8f5] px-6 py-10 text-center transition hover:border-[#e94f64] hover:bg-[#fff1f3]">
-                    <span className="text-3xl">📸</span>
+                    <span className="text-3xl">
+                      📸
+                    </span>
 
                     <span className="mt-3 text-sm font-bold text-[#171717]">
                       Choose a photo
@@ -463,6 +554,7 @@ export default function ApplyPage() {
                             <div className="mt-3 flex gap-2">
                               <label className="cursor-pointer rounded-lg border border-[#e8d9db] bg-white px-3 py-2 text-xs font-semibold transition hover:border-[#e94f64]">
                                 Replace
+
                                 <input
                                   type="file"
                                   accept="image/jpeg,image/png,image/webp"
@@ -543,7 +635,11 @@ export default function ApplyPage() {
                   <div className="mt-3 flex gap-3">
                     <button
                       type="button"
-                      onClick={() => setValue("hasPets", true)}
+                      onClick={() =>
+                        setValue("hasPets", true, {
+                          shouldDirty: true,
+                        })
+                      }
                       className={`rounded-xl px-5 py-3 text-sm font-semibold ${
                         hasPets
                           ? "bg-[#e94f64] text-white"
@@ -555,7 +651,11 @@ export default function ApplyPage() {
 
                     <button
                       type="button"
-                      onClick={() => setValue("hasPets", false)}
+                      onClick={() =>
+                        setValue("hasPets", false, {
+                          shouldDirty: true,
+                        })
+                      }
                       className={`rounded-xl px-5 py-3 text-sm font-semibold ${
                         hasPets === false
                           ? "bg-[#e94f64] text-white"
@@ -576,6 +676,7 @@ export default function ApplyPage() {
                     />
                   </Field>
                 )}
+
               </div>
             </StepContainer>
           )}
@@ -642,6 +743,7 @@ export default function ApplyPage() {
                     className="textarea"
                   />
                 </Field>
+
               </div>
             </StepContainer>
           )}
@@ -663,9 +765,15 @@ export default function ApplyPage() {
                     {[
                       ["CASUAL", "Something casual"],
                       ["SERIOUS", "A serious relationship"],
-                      ["OPEN_TO_SEEING", "Open to seeing where it goes"],
+                      [
+                        "OPEN_TO_SEEING",
+                        "Open to seeing where it goes",
+                      ],
                       ["MARRIAGE", "Marriage"],
-                      ["FOR_THE_PLOT", "Honestly? For the plot."],
+                      [
+                        "FOR_THE_PLOT",
+                        "Honestly? For the plot.",
+                      ],
                     ].map(([value, label]) => (
                       <label
                         key={value}
@@ -716,11 +824,12 @@ export default function ApplyPage() {
                     className="textarea"
                   />
                 </Field>
+
               </div>
             </StepContainer>
           )}
 
-          {/* STEP 5 */}
+          {/* STEP 5 — IMPORTANT QUESTIONS */}
           {step === 4 && (
             <StepContainer
               title="The important questions™."
@@ -769,6 +878,16 @@ export default function ApplyPage() {
                   question="Anything else the recruitment team should know?"
                   register={register("anythingElse")}
                 />
+
+              </div>
+
+              {/* IMPORTANT: This is NOT a submit button */}
+              <div className="mt-6 rounded-xl border border-[#f8dde2] bg-[#fff8f5] p-4">
+                <p className="text-xs leading-5 text-[#746f70]">
+                  💌 Take your time with these. Your answers are
+                  saved as you type and will only be submitted when
+                  you click the final button below.
+                </p>
               </div>
             </StepContainer>
           )}
@@ -789,7 +908,8 @@ export default function ApplyPage() {
               <button
                 type="button"
                 onClick={nextStep}
-                className="rounded-xl bg-[#e94f64] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                disabled={submitting}
+                className="rounded-xl bg-[#e94f64] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 Continue →
               </button>
@@ -910,9 +1030,7 @@ function Question({
 }: {
   emoji: string;
   question: string;
-  register: ReturnType<
-    ReturnType<typeof useForm>["register"]
-  >;
+  register: UseFormRegisterReturn;
 }) {
   return (
     <div className="rounded-2xl bg-[#fff8f5] p-5">

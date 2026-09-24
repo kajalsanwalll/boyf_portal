@@ -10,6 +10,7 @@ import {
   Heart,
   MapPin,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const responsibilities = [
   "Communicate like an adult",
@@ -44,6 +45,54 @@ const SCREEN =
 
 export default function Home() {
   const reduce = useReducedMotion();
+
+  const [hasApplication, setHasApplication] = useState(false);
+  const [candidateId, setCandidateId] = useState<string | null>(null);
+  const [checkingApplication, setCheckingApplication] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkApplication() {
+      try {
+        const response = await fetch("/api/me/candidate", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setHasApplication(Boolean(data.hasApplication));
+          setCandidateId(data.candidateId ?? null);
+        }
+      } catch (error) {
+        console.error("Failed to check application:", error);
+      } finally {
+        if (!cancelled) {
+          setCheckingApplication(false);
+        }
+      }
+    }
+
+    checkApplication();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const applicationHref =
+    hasApplication && candidateId
+      ? `/candidate/${candidateId}`
+      : "/apply";
+
+  const applicationLabel = hasApplication
+    ? "View my profile"
+    : "Continue application";
 
   return (
     <main className="h-svh snap-y snap-proximity overflow-y-auto overflow-x-hidden scroll-smooth bg-[#fff8f5] text-[#171717]">
@@ -93,12 +142,14 @@ export default function Home() {
 
             {/* LOGGED IN */}
             <Show when="signed-in">
-              <Link
-                href="/apply"
-                className={`hidden rounded-full bg-[#e94f64] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#d9364f] sm:block ${FOCUS}`}
-              >
-                Continue application
-              </Link>
+              {!checkingApplication && (
+                <Link
+                  href={applicationHref}
+                  className={`hidden rounded-full bg-[#e94f64] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#d9364f] sm:block ${FOCUS}`}
+                >
+                  {applicationLabel}
+                </Link>
+              )}
 
               <UserButton
                 appearance={{
@@ -157,16 +208,18 @@ export default function Home() {
 
               {/* LOGGED IN */}
               <Show when="signed-in">
-                <Link
-                  href="/apply"
-                  className={`group inline-flex items-center justify-center gap-2 rounded-full bg-[#e94f64] px-7 py-4 text-sm font-bold text-white transition hover:bg-[#d9364f] ${FOCUS}`}
-                >
-                  Continue application
-                  <ArrowUpRight
-                    size={17}
-                    className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                  />
-                </Link>
+                {!checkingApplication && (
+                  <Link
+                    href={applicationHref}
+                    className={`group inline-flex items-center justify-center gap-2 rounded-full bg-[#e94f64] px-7 py-4 text-sm font-bold text-white transition hover:bg-[#d9364f] ${FOCUS}`}
+                  >
+                    {applicationLabel}
+                    <ArrowUpRight
+                      size={17}
+                      className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    />
+                  </Link>
+                )}
               </Show>
 
               <a
@@ -397,8 +450,8 @@ export default function Home() {
             </h2>
 
             <p className="mx-auto mt-6 max-w-md leading-7 text-white/85">
-              Applications are reviewed manually. Low-effort answers may result
-              in immediate rejection and/or being made fun of.
+              Applications are reviewed manually. Low-effort answers may
+              result in immediate rejection and/or being made fun of.
             </p>
 
             {/* LOGGED OUT */}
@@ -414,13 +467,17 @@ export default function Home() {
 
             {/* LOGGED IN */}
             <Show when="signed-in">
-              <Link
-                href="/apply"
-                className="mt-9 inline-flex items-center gap-3 rounded-full bg-white px-8 py-4 text-sm font-bold text-[#e94f64] transition hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              >
-                Continue application
-                <ArrowUpRight size={18} />
-              </Link>
+              {!checkingApplication && (
+                <Link
+                  href={applicationHref}
+                  className="mt-9 inline-flex items-center gap-3 rounded-full bg-white px-8 py-4 text-sm font-bold text-[#e94f64] transition hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                >
+                  {hasApplication
+                    ? "View my profile"
+                    : "Continue application"}
+                  <ArrowUpRight size={18} />
+                </Link>
+              )}
             </Show>
           </div>
         </div>
