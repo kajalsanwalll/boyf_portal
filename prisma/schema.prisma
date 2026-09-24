@@ -63,7 +63,7 @@ model Candidate {
   // Basic information
   firstName  String
   lastName   String?
-  email      String   @unique
+  email      String  @unique
   age        Int
   city       String
   height     String?
@@ -72,34 +72,34 @@ model Candidate {
   photoUrl   String?
 
   // Lifestyle
-  workoutFrequency String?
-  diet             String?
+  workoutFrequency  String?
+  diet              String?
   weekendPreference String?
-  travels          String?
-  hasPets          Boolean?
-  petType          String?
+  travels           String?
+  hasPets           Boolean?
+  petType           String?
 
   // Personality
-  personality    PersonalityType?
-  conflictStyle  String?
-  communication  String?
+  personality     PersonalityType?
+  conflictStyle   String?
+  communication   String?
   friendsDescribe String?
 
   // Relationship
   relationshipIntent RelationshipIntent?
-  loveLanguages     String?
-  values            String?
-  longTermGoals     String?
-  relationshipNeeds String?
+  loveLanguages      String?
+  values             String?
+  longTermGoals      String?
+  relationshipNeeds  String?
 
   // Important questions
-  fryProtocol       String?
-  fineResponse      String?
-  readResponse      String?
-  toiletProtocol    String?
-  whyGoodBoyfriend  String?
+  fryProtocol        String?
+  fineResponse       String?
+  readResponse       String?
+  toiletProtocol     String?
+  whyGoodBoyfriend   String?
   whatMakesDifferent String?
-  anythingElse      String?
+  anythingElse       String?
 
   // Application status
   status ApplicationStatus @default(APPLIED)
@@ -112,18 +112,18 @@ model Candidate {
   valuesScore        Int?
 
   // Relations
-  notes           AdminNote[]
-  greenFlags      GreenFlag[]
-  redFlags        RedFlag[]
-  interviews      Interview[]
-  dates           Date[]
-  events          ApplicationEvent[]
+  notes      AdminNote[]
+  greenFlags GreenFlag[]
+  redFlags   RedFlag[]
+  interviews Interview[]
+  dates      Date[]
+  events     ApplicationEvent[]
 }
 
 model AdminNote {
-  id          String   @id @default(cuid())
-  content     String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
 
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
@@ -157,30 +157,30 @@ model Interview {
   createdAt   DateTime        @default(now())
 
   candidateId String
-  candidate   Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model Date {
-  id          String     @id @default(cuid())
-  scheduledAt DateTime
-  meetingUrl  String?
-  type        DateType   @default(ONLINE)
-  status      DateStatus @default(SCHEDULED)
-  prompt      String?
+  id           String     @id @default(cuid())
+  scheduledAt  DateTime
+  meetingUrl   String?
+  type         DateType   @default(ONLINE)
+  status       DateStatus @default(SCHEDULED)
+  prompt       String?
   privateNotes String?
-  createdAt   DateTime   @default(now())
+  createdAt    DateTime   @default(now())
 
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
 model ApplicationEvent {
-  id         String            @id @default(cuid())
+  id         String             @id @default(cuid())
   fromStatus ApplicationStatus?
   toStatus   ApplicationStatus
   note       String?
-  createdAt  DateTime          @default(now())
+  createdAt  DateTime           @default(now())
 
   candidateId String
-  candidate   Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
