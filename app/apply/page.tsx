@@ -18,6 +18,8 @@ const formSchema = z.object({
   height: z.string().optional(),
   zodiac: z.string().optional(),
   occupation: z.string().optional(),
+
+  // Cloudinary URL gets stored here
   photoUrl: z.string().optional(),
 
   workoutFrequency: z.string().optional(),
@@ -30,6 +32,7 @@ const formSchema = z.object({
   personality: z
     .enum(["INTROVERT", "EXTROVERT", "AMBIVERT", "DEPENDS"])
     .optional(),
+
   conflictStyle: z.string().optional(),
   communication: z.string().optional(),
   friendsDescribe: z.string().optional(),
@@ -43,6 +46,7 @@ const formSchema = z.object({
       "FOR_THE_PLOT",
     ])
     .optional(),
+
   loveLanguages: z.string().optional(),
   values: z.string().optional(),
   longTermGoals: z.string().optional(),
@@ -73,6 +77,10 @@ export default function ApplyPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+
   const {
     register,
     handleSubmit,
@@ -89,33 +97,117 @@ export default function ApplyPage() {
 
   const hasPets = watch("hasPets");
 
-  async function nextStep() {
-    const fieldsByStep: (keyof FormData)[][] = [
-      ["firstName", "email", "age", "city"],
-      [],
-      [],
-      [],
-      [],
+  async function handlePhotoUpload(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    setPhotoError("");
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
     ];
 
-    const fields = fieldsByStep[step];
-
-    if (fields.length > 0) {
-      const valid = await trigger(fields);
-
-      if (!valid) return;
+    if (!allowedTypes.includes(file.type)) {
+      setPhotoError("Please upload a JPG, PNG, or WEBP image.");
+      event.target.value = "";
+      return;
     }
 
-    setStep((current) =>
-      Math.min(current + 1, steps.length - 1)
-    );
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Image must be smaller than 5MB.");
+      event.target.value = "";
+      return;
+    }
+
+    // Local preview
+    const previewUrl = URL.createObjectURL(file);
+    setPhotoPreview(previewUrl);
+
+    setUploadingPhoto(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to upload photo.");
+      }
+
+      // Save Cloudinary URL into react-hook-form
+      setValue("photoUrl", result.url, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    } catch (error) {
+      console.error(error);
+
+      setPhotoError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload photo."
+      );
+
+      setPhotoPreview(null);
+      setValue("photoUrl", "");
+    } finally {
+      setUploadingPhoto(false);
+      event.target.value = "";
+    }
   }
+
+  function removePhoto() {
+    setPhotoPreview(null);
+    setPhotoError("");
+
+    setValue("photoUrl", "", {
+      shouldDirty: true,
+    });
+  }
+
+  async function nextStep() {
+  if (step >= steps.length - 1) return;
+
+  const fieldsByStep: (keyof FormData)[][] = [
+    ["firstName", "email", "age", "city"],
+    [],
+    [],
+    [],
+    [],
+  ];
+
+  const fields = fieldsByStep[step];
+
+  if (fields.length > 0) {
+    const valid = await trigger(fields);
+
+    if (!valid) return;
+  }
+
+  setStep((current) => current + 1);
+}
 
   function previousStep() {
     setStep((current) => Math.max(current - 1, 0));
   }
 
   async function submitApplication(data: FormData) {
+    if (uploadingPhoto) {
+      alert("Please wait for your photo to finish uploading.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -153,7 +245,8 @@ export default function ApplyPage() {
             href="/"
             className="text-2xl font-bold text-[#171717]"
           >
-            boyfriend<span className="text-[#e94f64]">.</span>
+            boyfriend
+            <span className="text-[#e94f64]">.</span>
           </a>
 
           <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-[#e94f64]">
@@ -213,9 +306,12 @@ export default function ApplyPage() {
 
         {/* FORM */}
         <form
-          onSubmit={handleSubmit(submitApplication)}
-          className="rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8"
-        >
+  onSubmit={(event) => {
+    event.preventDefault();
+    handleSubmit(submitApplication)(event);
+  }}
+  className="rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8"
+>
           {/* STEP 1 */}
           {step === 0 && (
             <StepContainer
@@ -223,6 +319,7 @@ export default function ApplyPage() {
               subtitle="The boring HR stuff. We promise it gets better."
             >
               <div className="grid gap-5 sm:grid-cols-2">
+
                 <Field
                   label="First name *"
                   error={errors.firstName?.message}
@@ -302,13 +399,99 @@ export default function ApplyPage() {
                 </Field>
               </div>
 
-              <Field label="Profile photo URL">
-                <input
-                  {...register("photoUrl")}
-                  placeholder="https://..."
-                  className="input"
-                />
-              </Field>
+              {/* PHOTO UPLOAD */}
+              <div className="mt-5">
+                <label className="block text-sm font-semibold text-[#171717]">
+                  Profile photo
+                </label>
+
+                <p className="mt-1 text-xs text-[#746f70]">
+                  Give the recruitment team something to work with.
+                  JPG, PNG or WEBP · max 5MB
+                </p>
+
+                {!photoPreview ? (
+                  <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#e8d9db] bg-[#fff8f5] px-6 py-10 text-center transition hover:border-[#e94f64] hover:bg-[#fff1f3]">
+                    <span className="text-3xl">📸</span>
+
+                    <span className="mt-3 text-sm font-bold text-[#171717]">
+                      Choose a photo
+                    </span>
+
+                    <span className="mt-1 text-xs text-[#746f70]">
+                      Upload from your device
+                    </span>
+
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-[#e8d9db] bg-[#fff8f5] p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+
+                      <img
+                        src={photoPreview}
+                        alt="Profile preview"
+                        className="h-32 w-32 rounded-xl object-cover"
+                      />
+
+                      <div className="flex-1">
+                        {uploadingPhoto ? (
+                          <>
+                            <p className="font-semibold text-[#171717]">
+                              Uploading photo...
+                            </p>
+
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f8dde2]">
+                              <div className="h-full w-2/3 animate-pulse rounded-full bg-[#e94f64]" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-[#171717]">
+                              ✓ Photo uploaded
+                            </p>
+
+                            <p className="mt-1 text-xs text-[#746f70]">
+                              Your photo has been securely uploaded.
+                            </p>
+
+                            <div className="mt-3 flex gap-2">
+                              <label className="cursor-pointer rounded-lg border border-[#e8d9db] bg-white px-3 py-2 text-xs font-semibold transition hover:border-[#e94f64]">
+                                Replace
+                                <input
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  onChange={handlePhotoUpload}
+                                  className="hidden"
+                                />
+                              </label>
+
+                              <button
+                                type="button"
+                                onClick={removePhoto}
+                                className="rounded-lg px-3 py-2 text-xs font-semibold text-[#e94f64] hover:bg-[#f8dde2]"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {photoError && (
+                  <p className="mt-2 text-xs font-medium text-[#e94f64]">
+                    {photoError}
+                  </p>
+                )}
+              </div>
             </StepContainer>
           )}
 
@@ -319,6 +502,7 @@ export default function ApplyPage() {
               subtitle="We need to know what we're signing up for."
             >
               <div className="space-y-5">
+
                 <Field label="How often do you work out?">
                   <input
                     {...register("workoutFrequency")}
@@ -403,6 +587,7 @@ export default function ApplyPage() {
               subtitle="There are no wrong answers. Probably."
             >
               <div className="space-y-6">
+
                 <div>
                   <label className="block text-sm font-semibold text-[#171717]">
                     How would you describe yourself?
@@ -468,6 +653,7 @@ export default function ApplyPage() {
               subtitle="Okay, now we're getting serious."
             >
               <div className="space-y-6">
+
                 <div>
                   <label className="block text-sm font-semibold text-[#171717]">
                     What are you looking for?
@@ -541,6 +727,7 @@ export default function ApplyPage() {
               subtitle="This is where careers are made or destroyed."
             >
               <div className="space-y-6">
+
                 <Question
                   emoji="🍟"
                   question="There is one fry left. What happens?"
@@ -588,6 +775,7 @@ export default function ApplyPage() {
 
           {/* NAVIGATION */}
           <div className="mt-8 flex items-center justify-between border-t border-[#e8d9db] pt-6">
+
             <button
               type="button"
               onClick={previousStep}
@@ -608,11 +796,13 @@ export default function ApplyPage() {
             ) : (
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || uploadingPhoto}
                 className="rounded-xl bg-[#e94f64] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 {submitting
                   ? "Submitting..."
+                  : uploadingPhoto
+                  ? "Uploading photo..."
                   : "Submit Application 💘"}
               </button>
             )}
@@ -720,7 +910,9 @@ function Question({
 }: {
   emoji: string;
   question: string;
-  register: ReturnType<ReturnType<typeof useForm>["register"]>;
+  register: ReturnType<
+    ReturnType<typeof useForm>["register"]
+  >;
 }) {
   return (
     <div className="rounded-2xl bg-[#fff8f5] p-5">

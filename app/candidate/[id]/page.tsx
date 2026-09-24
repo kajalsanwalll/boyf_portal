@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import PhotoUpload from "./PhotoUpload";
 import { Bricolage_Grotesque, Figtree } from "next/font/google";
 
 const display = Bricolage_Grotesque({
@@ -48,7 +49,8 @@ const stageDescriptions: Record<string, string> = {
     "Interview done. Now we wait and pretend to be chill.",
   DATE_SCHEDULED: "You've made it to the date stage. Interesting...",
   DATE_COMPLETED: "The date happened. The committee is thinking.",
-  ACCEPTED: "Congratulations. You have successfully secured the position.",
+  ACCEPTED:
+    "Congratulations. You have successfully secured the position.",
   REJECTED: "This application has been closed.",
   WITHDRAWN: "This application was withdrawn.",
 };
@@ -62,7 +64,6 @@ function formatDate(date: Date) {
 
 function getStageIndex(status: string) {
   if (status === "REJECTED" || status === "WITHDRAWN") return -1;
-
   return timeline.indexOf(status);
 }
 
@@ -136,11 +137,13 @@ export default async function CandidatePage({
           scheduledAt: "desc",
         },
       },
+
       dates: {
         orderBy: {
           scheduledAt: "desc",
         },
       },
+
       events: {
         orderBy: {
           createdAt: "desc",
@@ -213,29 +216,16 @@ export default async function CandidatePage({
       </header>
 
       <div className="mx-auto max-w-5xl space-y-6 px-5 py-8 md:space-y-8 md:px-8 md:py-12">
-
         {/* Hero */}
         <section className="grid gap-4 md:grid-cols-[1fr_auto] md:gap-6">
-
           {/* Candidate introduction */}
           <div className="relative overflow-hidden rounded-3xl bg-white p-7 shadow-[0_1px_0_rgb(42_22_38/0.06),0_12px_32px_-16px_rgb(217_54_79/0.35)] md:p-10">
-
             <div className="flex flex-col gap-7 sm:flex-row sm:items-center">
-
               {/* Candidate Photo */}
-              <div className="shrink-0">
-                {candidate.photoUrl ? (
-                  <img
-                    src={candidate.photoUrl}
-                    alt={`${candidate.firstName}'s profile`}
-                    className="h-32 w-32 rounded-[24px] object-cover ring-4 ring-[#fdf1f3] sm:h-36 sm:w-36 md:h-40 md:w-40"
-                  />
-                ) : (
-                  <div className="flex h-32 w-32 items-center justify-center rounded-[24px] bg-[#fdf1f3] text-5xl ring-4 ring-[#fdf1f3] sm:h-36 sm:w-36 md:h-40 md:w-40">
-                    👤
-                  </div>
-                )}
-              </div>
+              <PhotoUpload
+                currentPhotoUrl={candidate.photoUrl}
+                firstName={candidate.firstName}
+              />
 
               {/* Candidate info */}
               <div className="min-w-0">
@@ -244,8 +234,8 @@ export default async function CandidatePage({
                 </h1>
 
                 <p className="mt-5 max-w-md text-base leading-7 text-[#6b5566]">
-                  Welcome back to your very serious, completely legitimate
-                  boyfriend recruitment journey.
+                  Welcome back to your very serious, completely
+                  legitimate boyfriend recruitment journey.
                 </p>
 
                 <ul className="mt-7 flex flex-wrap gap-2 text-sm">
@@ -294,8 +284,8 @@ export default async function CandidatePage({
               </p>
 
               <p className="mt-1 text-sm text-white/65">
-                Extremely scientific. Probably. Just for fun, not a real
-                assessment.
+                Extremely scientific. Probably. Just for fun, not a
+                real assessment.
               </p>
             </div>
           </div>
@@ -313,9 +303,9 @@ export default async function CandidatePage({
             </h2>
 
             <p className="mt-3 max-w-lg leading-7 text-white/90">
-              Congratulations. After extensive review, several meetings,
-              and absolutely no conflict of interest, you have secured the
-              position.
+              Congratulations. After extensive review, several
+              meetings, and absolutely no conflict of interest, you
+              have secured the position.
             </p>
           </section>
         )}
@@ -327,8 +317,8 @@ export default async function CandidatePage({
             </h2>
 
             <p className="mt-2 max-w-lg text-[#6b5566]">
-              Thank you for applying. The committee has made its extremely
-              serious decision.
+              Thank you for applying. The committee has made its
+              extremely serious decision.
             </p>
           </section>
         )}
@@ -471,7 +461,10 @@ export default async function CandidatePage({
               }`.trim()}
             />
 
-            <Detail label="Age" value={String(candidate.age)} />
+            <Detail
+              label="Age"
+              value={String(candidate.age)}
+            />
 
             <Detail label="City" value={candidate.city} />
 
