@@ -1,0 +1,186 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ApplicationStatus {
+  APPLIED
+  REVIEWING
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  DATE_SCHEDULED
+  DATE_COMPLETED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum RelationshipIntent {
+  CASUAL
+  SERIOUS
+  OPEN_TO_SEEING
+  MARRIAGE
+  FOR_THE_PLOT
+}
+
+enum PersonalityType {
+  INTROVERT
+  EXTROVERT
+  AMBIVERT
+  DEPENDS
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum DateType {
+  ONLINE
+  COFFEE
+  DINNER
+  WALK
+  OTHER
+}
+
+enum DateStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model Candidate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Basic information
+  firstName  String
+  lastName   String?
+  email      String   @unique
+  age        Int
+  city       String
+  height     String?
+  zodiac     String?
+  occupation String?
+  photoUrl   String?
+
+  // Lifestyle
+  workoutFrequency String?
+  diet             String?
+  weekendPreference String?
+  travels          String?
+  hasPets          Boolean?
+  petType          String?
+
+  // Personality
+  personality    PersonalityType?
+  conflictStyle  String?
+  communication  String?
+  friendsDescribe String?
+
+  // Relationship
+  relationshipIntent RelationshipIntent?
+  loveLanguages     String?
+  values            String?
+  longTermGoals     String?
+  relationshipNeeds String?
+
+  // Important questions
+  fryProtocol       String?
+  fineResponse      String?
+  readResponse      String?
+  toiletProtocol    String?
+  whyGoodBoyfriend  String?
+  whatMakesDifferent String?
+  anythingElse      String?
+
+  // Application status
+  status ApplicationStatus @default(APPLIED)
+
+  // Compatibility scores
+  compatibilityScore Int?
+  communicationScore Int?
+  humorScore         Int?
+  lifestyleScore     Int?
+  valuesScore        Int?
+
+  // Relations
+  notes           AdminNote[]
+  greenFlags      GreenFlag[]
+  redFlags        RedFlag[]
+  interviews      Interview[]
+  dates           Date[]
+  events          ApplicationEvent[]
+}
+
+model AdminNote {
+  id          String   @id @default(cuid())
+  content     String
+  createdAt   DateTime @default(now())
+
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+model GreenFlag {
+  id          String   @id @default(cuid())
+  description String
+  createdAt   DateTime @default(now())
+
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+model RedFlag {
+  id          String   @id @default(cuid())
+  description String
+  createdAt   DateTime @default(now())
+
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+model Interview {
+  id          String          @id @default(cuid())
+  scheduledAt DateTime
+  meetingUrl  String?
+  type        String          @default("GOOGLE_MEET")
+  status      InterviewStatus @default(SCHEDULED)
+  adminNotes  String?
+  createdAt   DateTime        @default(now())
+
+  candidateId String
+  candidate   Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+model Date {
+  id          String     @id @default(cuid())
+  scheduledAt DateTime
+  meetingUrl  String?
+  type        DateType   @default(ONLINE)
+  status      DateStatus @default(SCHEDULED)
+  prompt      String?
+  privateNotes String?
+  createdAt   DateTime   @default(now())
+
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+model ApplicationEvent {
+  id         String            @id @default(cuid())
+  fromStatus ApplicationStatus?
+  toStatus   ApplicationStatus
+  note       String?
+  createdAt  DateTime          @default(now())
+
+  candidateId String
+  candidate   Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
