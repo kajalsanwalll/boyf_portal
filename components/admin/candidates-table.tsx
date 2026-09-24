@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type Candidate = {
@@ -21,9 +22,7 @@ type Props = {
 
 const PAGE_SIZE = 25;
 
-export default function CandidatesTable({
-  candidates,
-}: Props) {
+export default function CandidatesTable({ candidates }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
@@ -31,18 +30,19 @@ export default function CandidatesTable({
   const [page, setPage] = useState(1);
 
   const cities = useMemo(() => {
-    return [...new Set(candidates.map((c) => c.city))].sort();
+    return [...new Set(candidates.map((candidate) => candidate.city))].sort();
   }, [candidates]);
 
   const filteredCandidates = useMemo(() => {
     return candidates.filter((candidate) => {
+      const fullName =
+        `${candidate.firstName} ${candidate.lastName ?? ""}`.toLowerCase();
+
+      const searchTerm = search.toLowerCase();
+
       const searchMatch =
-        `${candidate.firstName} ${candidate.lastName ?? ""}`
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        candidate.city
-          .toLowerCase()
-          .includes(search.toLowerCase());
+        fullName.includes(searchTerm) ||
+        candidate.city.toLowerCase().includes(searchTerm);
 
       const statusMatch =
         status === "ALL" || candidate.status === status;
@@ -92,9 +92,7 @@ export default function CandidatesTable({
       setSelected((current) => [
         ...new Set([
           ...current,
-          ...visibleCandidates.map(
-            (candidate) => candidate.id
-          ),
+          ...visibleCandidates.map((candidate) => candidate.id),
         ]),
       ]);
     }
@@ -103,9 +101,8 @@ export default function CandidatesTable({
   async function bulkUpdate(newStatus: string) {
     if (!selected.length) return;
 
-    const response = await fetch(
-      "/api/admin/candidates/bulk",
-      {
+    try {
+      const response = await fetch("/api/admin/candidates/bulk", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -114,15 +111,18 @@ export default function CandidatesTable({
           candidateIds: selected,
           status: newStatus,
         }),
+      });
+
+      if (!response.ok) {
+        alert("Something went wrong.");
+        return;
       }
-    );
 
-    if (!response.ok) {
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
       alert("Something went wrong.");
-      return;
     }
-
-    window.location.reload();
   }
 
   return (
@@ -138,7 +138,7 @@ export default function CandidatesTable({
           label="Shortlisted"
           value={
             candidates.filter(
-              (c) => c.status === "SHORTLISTED"
+              (candidate) => candidate.status === "SHORTLISTED"
             ).length
           }
         />
@@ -147,9 +147,9 @@ export default function CandidatesTable({
           label="Interviews"
           value={
             candidates.filter(
-              (c) =>
-                c.status === "INTERVIEW_SCHEDULED" ||
-                c.status === "INTERVIEW_COMPLETED"
+              (candidate) =>
+                candidate.status === "INTERVIEW_SCHEDULED" ||
+                candidate.status === "INTERVIEW_COMPLETED"
             ).length
           }
         />
@@ -158,10 +158,10 @@ export default function CandidatesTable({
           label="Avg. Compatibility"
           value={`${Math.round(
             candidates.reduce(
-              (sum, c) =>
-                sum + (c.compatibilityScore ?? 0),
+              (sum, candidate) =>
+                sum + (candidate.compatibilityScore ?? 0),
               0
-            ) / candidates.length
+            ) / Math.max(candidates.length, 1)
           )}%`}
         />
       </div>
@@ -232,18 +232,16 @@ export default function CandidatesTable({
 
           <div className="flex gap-2">
             <button
-              onClick={() =>
-                bulkUpdate("SHORTLISTED")
-              }
+              type="button"
+              onClick={() => bulkUpdate("SHORTLISTED")}
               className="rounded-lg bg-[#e94f64] px-4 py-2 text-sm font-medium"
             >
               Shortlist
             </button>
 
             <button
-              onClick={() =>
-                bulkUpdate("REJECTED")
-              }
+              type="button"
+              onClick={() => bulkUpdate("REJECTED")}
               className="rounded-lg border border-white/20 px-4 py-2 text-sm"
             >
               Reject
@@ -297,9 +295,7 @@ export default function CandidatesTable({
                   <td className="px-5 py-4">
                     <input
                       type="checkbox"
-                      checked={selected.includes(
-                        candidate.id
-                      )}
+                      checked={selected.includes(candidate.id)}
                       onChange={() =>
                         toggleCandidate(candidate.id)
                       }
@@ -308,14 +304,17 @@ export default function CandidatesTable({
 
                   <td className="px-5 py-4">
                     <div>
-                      <p className="font-semibold text-[#171717]">
+                      <Link
+                        href={`/admin/candidates/${candidate.id}`}
+                        className="inline-block cursor-pointer font-semibold text-[#171717] hover:text-[#e94f64] hover:underline"
+                      >
                         {candidate.firstName}{" "}
-                        {candidate.lastName}
-                      </p>
+                        {candidate.lastName ?? ""}
+                      </Link>
 
                       <p className="text-xs text-[#746f70]">
                         {candidate.age} ·{" "}
-                        {candidate.occupation}
+                        {candidate.occupation ?? "—"}
                       </p>
                     </div>
                   </td>
@@ -325,9 +324,7 @@ export default function CandidatesTable({
                   </td>
 
                   <td className="px-5 py-4">
-                    {formatValue(
-                      candidate.relationshipIntent
-                    )}
+                    {formatValue(candidate.relationshipIntent)}
                   </td>
 
                   <td className="px-5 py-4">
@@ -337,9 +334,7 @@ export default function CandidatesTable({
                   </td>
 
                   <td className="px-5 py-4">
-                    <StatusBadge
-                      status={candidate.status}
-                    />
+                    <StatusBadge status={candidate.status} />
                   </td>
                 </tr>
               ))}
@@ -375,6 +370,7 @@ export default function CandidatesTable({
 
           <div className="flex gap-2">
             <button
+              type="button"
               disabled={page === 1}
               onClick={() =>
                 setPage((current) =>
@@ -391,6 +387,7 @@ export default function CandidatesTable({
             </span>
 
             <button
+              type="button"
               disabled={page === totalPages}
               onClick={() =>
                 setPage((current) =>
@@ -448,8 +445,7 @@ function formatValue(value: string | null) {
     .split("_")
     .map(
       (word) =>
-        word.charAt(0).toUpperCase() +
-        word.slice(1)
+        word.charAt(0).toUpperCase() + word.slice(1)
     )
     .join(" ");
 }
