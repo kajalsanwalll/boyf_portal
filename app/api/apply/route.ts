@@ -1,3 +1,4 @@
+import { calculateCompatibility } from "@/lib/compatibility";
 import { prisma } from "@/lib/prisma";
 import {
   ApplicationStatus,
@@ -9,6 +10,34 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
+    const compatibility = calculateCompatibility({
+    communication: body.communication,
+    conflictStyle: body.conflictStyle,
+
+    workoutFrequency: body.workoutFrequency,
+    diet: body.diet,
+    weekendPreference: body.weekendPreference,
+    travels: body.travels,
+
+    personality: body.personality
+     ? (body.personality as PersonalityType)
+    : null,
+
+    relationshipIntent: body.relationshipIntent
+     ? (body.relationshipIntent as RelationshipIntent)
+     : null,
+
+    longTermGoals: body.longTermGoals,
+    relationshipNeeds: body.relationshipNeeds,
+    values: body.values,
+
+    fryProtocol: body.fryProtocol,
+    fineResponse: body.fineResponse,
+    readResponse: body.readResponse,
+    toiletProtocol: body.toiletProtocol,
+    whyGoodBoyfriend: body.whyGoodBoyfriend,
+    });
 
     if (!body.firstName || !body.email || !body.age || !body.city) {
       return NextResponse.json(
@@ -105,6 +134,12 @@ export async function POST(request: Request) {
                 body.anythingElse || null,
 
               status: ApplicationStatus.APPLIED,
+
+              compatibilityScore: compatibility.compatibilityScore,
+              communicationScore: compatibility.communicationScore,
+              lifestyleScore: compatibility.lifestyleScore,
+              valuesScore: compatibility.valuesScore,
+              humorScore: compatibility.humorScore,
             },
           });
 

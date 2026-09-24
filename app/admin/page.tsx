@@ -288,6 +288,13 @@ export default async function AdminDashboard() {
                         </div>
                       </div>
 
+                      <Link
+  href="/admin/calendar"
+  className="rounded-2xl bg-[#2a1626] px-5 py-4 text-sm font-bold text-white transition hover:bg-[#d9364f]"
+>
+  📅 Recruitment Calendar →
+</Link>
+
                       <div className="flex items-center gap-3 pl-14 md:pl-0">
                         {c.compatibilityScore !== null && (
                           <span className="text-sm font-semibold tabular-nums">
