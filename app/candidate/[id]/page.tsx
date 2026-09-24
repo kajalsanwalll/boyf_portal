@@ -8,62 +8,48 @@ type Props = {
   }>;
 };
 
-const stages = [
-  {
-    status: "APPLIED",
-    label: "Application Submitted",
-    emoji: "📨",
-    description: "Your application has entered the boyfriend pipeline.",
-  },
-  {
-    status: "REVIEWING",
-    label: "Under Review",
-    emoji: "🔎",
-    description: "Our recruitment team is reviewing your application.",
-  },
-  {
-    status: "SHORTLISTED",
-    label: "Shortlisted",
-    emoji: "❤️",
-    description: "You've made it through the first round.",
-  },
-  {
-    status: "INTERVIEW_SCHEDULED",
-    label: "Interview",
-    emoji: "📅",
-    description: "Time to prove you're boyfriend material.",
-  },
-  {
-    status: "INTERVIEW_COMPLETED",
-    label: "Interview Completed",
-    emoji: "🎤",
-    description: "The interview is officially done.",
-  },
-  {
-    status: "DATE_SCHEDULED",
-    label: "Online Date",
-    emoji: "💕",
-    description: "You've made it to the date stage.",
-  },
-  {
-    status: "DATE_COMPLETED",
-    label: "Date Completed",
-    emoji: "✨",
-    description: "The date has been completed.",
-  },
-  {
-    status: "ACCEPTED",
-    label: "Accepted",
-    emoji: "💍",
-    description: "Congratulations. You've been hired.",
-  },
+const statusLabels: Record<string, string> = {
+  APPLIED: "Application Received",
+  REVIEWING: "Application Under Review",
+  SHORTLISTED: "Shortlisted",
+  INTERVIEW_SCHEDULED: "Interview Scheduled",
+  INTERVIEW_COMPLETED: "Interview Completed",
+  DATE_SCHEDULED: "Date Scheduled",
+  DATE_COMPLETED: "Date Completed",
+  ACCEPTED: "Accepted 💖",
+  REJECTED: "Application Closed",
+  WITHDRAWN: "Application Withdrawn",
+};
+
+const timeline = [
+  "APPLIED",
+  "REVIEWING",
+  "SHORTLISTED",
+  "INTERVIEW_SCHEDULED",
+  "INTERVIEW_COMPLETED",
+  "DATE_SCHEDULED",
+  "DATE_COMPLETED",
+  "ACCEPTED",
 ];
 
-const stageOrder = stages.map((stage) => stage.status);
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
 
-export default async function CandidateStatusPage({
-  params,
-}: Props) {
+function getStageIndex(status: string) {
+  const index = timeline.indexOf(status);
+
+  if (status === "REJECTED" || status === "WITHDRAWN") {
+    return -1;
+  }
+
+  return index;
+}
+
+export default async function CandidatePage({ params }: Props) {
   const { id } = await params;
 
   const candidate = await prisma.candidate.findUnique({
@@ -75,13 +61,11 @@ export default async function CandidateStatusPage({
         orderBy: {
           scheduledAt: "desc",
         },
-        take: 1,
       },
       dates: {
         orderBy: {
           scheduledAt: "desc",
         },
-        take: 1,
       },
       events: {
         orderBy: {
@@ -95,373 +79,418 @@ export default async function CandidateStatusPage({
     notFound();
   }
 
-  const currentIndex = stageOrder.indexOf(candidate.status);
-
-  const isRejected = candidate.status === "REJECTED";
-  const isWithdrawn = candidate.status === "WITHDRAWN";
+  const currentStage = getStageIndex(candidate.status);
 
   const latestInterview = candidate.interviews[0];
   const latestDate = candidate.dates[0];
 
-  return (
-    <main className="min-h-screen bg-[#fff8f5] px-4 py-10 md:px-8">
-      <div className="mx-auto max-w-4xl">
+  const isRejected =
+    candidate.status === "REJECTED" ||
+    candidate.status === "WITHDRAWN";
 
-        {/* TOP BRAND */}
-        <div className="mb-8 flex items-center justify-between">
+  const isAccepted = candidate.status === "ACCEPTED";
+
+  return (
+    <main className="min-h-screen bg-[#fff8f5] text-[#171717]">
+
+      {/* HEADER */}
+
+      <header className="border-b border-[#e8d9db] bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+
           <Link
             href="/"
-            className="text-xl font-bold tracking-tight text-[#171717]"
+            className="text-xl font-bold tracking-tight"
           >
-            boyfriend<span className="text-[#e94f64]">.</span>
+            Boyfriend<span className="text-[#e94f64]">.co</span>
           </Link>
 
-          <span className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#746f70] shadow-sm">
+          <span className="rounded-full bg-[#f8dde2] px-4 py-2 text-xs font-semibold text-[#e94f64]">
             Candidate Portal
           </span>
+
         </div>
+      </header>
 
-        {/* HEADER */}
-        <section className="rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-10">
-          <div className="text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#f8dde2] text-3xl">
-              {candidate.photoUrl ? (
-                <img
-                  src={candidate.photoUrl}
-                  alt={`${candidate.firstName} profile`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                "👤"
-              )}
-            </div>
+      <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8">
 
-            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-[#e94f64]">
-              Boyfriend Recruitment Portal
-            </p>
+        {/* HERO */}
 
-            <h1 className="mt-2 text-4xl font-bold tracking-tight text-[#171717]">
-              Hey, {candidate.firstName} 👋
-            </h1>
+        <section className="mb-8">
 
-            <p className="mx-auto mt-3 max-w-lg text-[#746f70]">
-              Here's everything you need to know about your application.
-            </p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#e94f64]">
+            Candidate Portal
+          </p>
 
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <span className="rounded-full bg-[#fff8f5] px-4 py-2 text-sm text-[#746f70]">
-                #{candidate.id.slice(-6).toUpperCase()}
-              </span>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
+            Hi, {candidate.firstName}. 👋
+          </h1>
 
-              <span className="rounded-full bg-[#f8dde2] px-4 py-2 text-sm font-semibold text-[#e94f64]">
-                {formatStatus(candidate.status)}
-              </span>
-            </div>
+          <p className="mt-3 max-w-2xl text-[#746f70]">
+            Here's everything happening with your boyfriend
+            application.
+          </p>
+
+          <div className="mt-5 inline-flex items-center rounded-full border border-[#e8d9db] bg-white px-4 py-2 text-xs text-[#746f70]">
+            Candidate ID:
+            <span className="ml-2 font-mono font-semibold text-[#171717]">
+              {candidate.id}
+            </span>
           </div>
+
         </section>
 
-        {/* REJECTED */}
+        {/* FINAL RESULT */}
+
+        {isAccepted && (
+          <section className="mb-8 rounded-3xl bg-[#171717] p-8 text-white shadow-sm">
+
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f8dde2]">
+              Final Decision
+            </p>
+
+            <h2 className="mt-3 text-4xl font-bold">
+              You're in. 💖
+            </h2>
+
+            <p className="mt-3 max-w-xl text-white/70">
+              Congratulations. You have successfully cleared
+              the boyfriend recruitment pipeline.
+            </p>
+
+          </section>
+        )}
+
         {isRejected && (
-          <section className="mt-6 rounded-3xl border border-[#e8d9db] bg-white p-6 text-center shadow-sm md:p-8">
-            <div className="text-5xl">💔</div>
+          <section className="mb-8 rounded-3xl border border-[#e8d9db] bg-white p-8">
 
-            <h2 className="mt-4 text-2xl font-bold text-[#171717]">
-              Application Update
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#746f70]">
+              Final Decision
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold">
+              Application closed 🫡
             </h2>
 
-            <p className="mx-auto mt-2 max-w-lg text-[#746f70]">
-              Thank you for applying. Unfortunately, we've decided not to
-              move forward with your application at this time.
+            <p className="mt-3 max-w-xl text-[#746f70]">
+              Thank you for making it through the process.
+              The recruitment team has closed this application.
             </p>
+
           </section>
         )}
 
-        {/* WITHDRAWN */}
-        {isWithdrawn && (
-          <section className="mt-6 rounded-3xl border border-[#e8d9db] bg-white p-6 text-center shadow-sm md:p-8">
-            <div className="text-5xl">👋</div>
+        {/* CURRENT STATUS */}
 
-            <h2 className="mt-4 text-2xl font-bold text-[#171717]">
-              Application Withdrawn
-            </h2>
+        {!isAccepted && !isRejected && (
+          <section className="mb-8 rounded-3xl border border-[#e8d9db] bg-white p-7 shadow-sm">
 
-            <p className="mt-2 text-[#746f70]">
-              Your application has been withdrawn from the recruitment
-              process.
-            </p>
-          </section>
-        )}
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
 
-        {/* PROGRESS */}
-        {!isRejected && !isWithdrawn && (
-          <section className="mt-6 rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8">
-            <div className="flex items-end justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wider text-[#746f70]">
-                  Application progress
+                <p className="text-sm text-[#746f70]">
+                  Current status
                 </p>
 
-                <h2 className="mt-1 text-2xl font-bold text-[#171717]">
-                  The boyfriend pipeline
+                <h2 className="mt-1 text-2xl font-bold">
+                  {statusLabels[candidate.status] ??
+                    candidate.status}
                 </h2>
               </div>
 
-              <span className="text-sm font-semibold text-[#e94f64]">
-                {Math.max(currentIndex + 1, 1)} / {stages.length}
-              </span>
+              <div className="rounded-full bg-[#f8dde2] px-5 py-3 text-sm font-semibold text-[#e94f64]">
+                {candidate.compatibilityScore
+                  ? `${candidate.compatibilityScore}% compatibility`
+                  : "Application in progress"}
+              </div>
+
             </div>
 
-            <div className="mt-8 space-y-0">
-              {stages.map((stage, index) => {
-                const isComplete =
-                  currentIndex >= index;
+          </section>
+        )}
 
-                const isCurrent =
-                  currentIndex === index;
+        {/* PIPELINE */}
 
-                return (
-                  <div
-                    key={stage.status}
-                    className="relative flex gap-4"
-                  >
-                    {/* CONNECTING LINE */}
-                    {index < stages.length - 1 && (
+        <section className="mb-8 rounded-3xl border border-[#e8d9db] bg-white p-7 shadow-sm">
+
+          <div className="mb-7">
+
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#e94f64]">
+              Your journey
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold">
+              Recruitment pipeline
+            </h2>
+
+          </div>
+
+          <div className="space-y-0">
+
+            {timeline.map((stage, index) => {
+
+              const completed =
+                currentStage >= index;
+
+              const active =
+                candidate.status === stage;
+
+              const isLast =
+                index === timeline.length - 1;
+
+              return (
+                <div
+                  key={stage}
+                  className="flex gap-4"
+                >
+
+                  {/* DOT + LINE */}
+
+                  <div className="flex flex-col items-center">
+
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold ${
+                        completed
+                          ? "border-[#e94f64] bg-[#e94f64] text-white"
+                          : "border-[#e8d9db] bg-white text-[#b8afb0]"
+                      }`}
+                    >
+                      {completed ? "✓" : index + 1}
+                    </div>
+
+                    {!isLast && (
                       <div
-                        className={`absolute left-[19px] top-10 h-[calc(100%-2px)] w-0.5 ${
-                          currentIndex > index
+                        className={`h-12 w-[2px] ${
+                          currentStage > index
                             ? "bg-[#e94f64]"
                             : "bg-[#e8d9db]"
                         }`}
                       />
                     )}
 
-                    {/* DOT */}
-                    <div
-                      className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm ${
-                        isComplete
-                          ? "bg-[#e94f64] text-white"
-                          : "bg-[#fff8f5] text-[#746f70]"
-                      } ${
-                        isCurrent
-                          ? "ring-4 ring-[#f8dde2]"
-                          : ""
+                  </div>
+
+                  {/* CONTENT */}
+
+                  <div className="pb-8">
+
+                    <p
+                      className={`font-semibold ${
+                        active
+                          ? "text-[#e94f64]"
+                          : completed
+                          ? "text-[#171717]"
+                          : "text-[#746f70]"
                       }`}
                     >
-                      {isComplete ? "✓" : stage.emoji}
-                    </div>
+                      {statusLabels[stage]}
+                    </p>
 
-                    {/* CONTENT */}
-                    <div className="pb-8">
-                      <p
-                        className={`font-semibold ${
-                          isCurrent
-                            ? "text-[#e94f64]"
-                            : "text-[#171717]"
-                        }`}
-                      >
-                        {stage.label}
-                      </p>
-
+                    {active && (
                       <p className="mt-1 text-sm text-[#746f70]">
-                        {stage.description}
+                        This is your current stage.
                       </p>
+                    )}
 
-                      {isCurrent && (
-                        <span className="mt-2 inline-block rounded-full bg-[#f8dde2] px-3 py-1 text-xs font-semibold text-[#e94f64]">
-                          Current stage
-                        </span>
-                      )}
-                    </div>
                   </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+
+                </div>
+              );
+            })}
+
+          </div>
+
+        </section>
 
         {/* INTERVIEW */}
+
         {latestInterview && (
-          <section className="mt-6 overflow-hidden rounded-3xl border border-[#e8d9db] bg-white shadow-sm">
-            <div className="bg-[#e94f64] px-6 py-5 text-white md:px-8">
-              <p className="text-sm font-semibold uppercase tracking-wider opacity-80">
-                Next step
+          <section className="mb-8 rounded-3xl border border-[#e8d9db] bg-white p-7 shadow-sm">
+
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#e94f64]">
+              Interview
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold">
+              Let's talk. 🎤
+            </h2>
+
+            <div className="mt-5 rounded-2xl bg-[#fff8f5] p-5">
+
+              <p className="text-sm text-[#746f70]">
+                Scheduled for
               </p>
 
-              <h2 className="mt-1 text-2xl font-bold">
-                Your interview is scheduled 📅
-              </h2>
-            </div>
+              <p className="mt-1 text-lg font-bold">
+                {formatDate(latestInterview.scheduledAt)}
+              </p>
 
-            <div className="p-6 md:p-8">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl bg-[#fff8f5] p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#746f70]">
-                    Date & Time
-                  </p>
+              {latestInterview.status === "SCHEDULED" &&
+                latestInterview.meetingUrl && (
+                  <a
+                    href={latestInterview.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex rounded-xl bg-[#e94f64] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    Join Google Meet →
+                  </a>
+                )}
 
-                  <p className="mt-2 font-semibold text-[#171717]">
-                    {new Date(
-                      latestInterview.scheduledAt
-                    ).toLocaleString()}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-[#fff8f5] p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-[#746f70]">
-                    Format
-                  </p>
-
-                  <p className="mt-2 font-semibold text-[#171717]">
-                    Online · Google Meet
-                  </p>
-                </div>
-              </div>
-
-              {latestInterview.meetingUrl && (
-                <a
-                  href={latestInterview.meetingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-5 block rounded-2xl bg-[#171717] px-5 py-4 text-center font-semibold text-white transition hover:opacity-90"
-                >
-                  Join Google Meet →
-                </a>
+              {latestInterview.status === "COMPLETED" && (
+                <p className="mt-3 text-sm font-semibold text-[#e94f64]">
+                  ✓ Interview completed
+                </p>
               )}
 
-              <p className="mt-4 text-center text-xs text-[#746f70]">
-                Please be on time. First impressions matter. Apparently.
-              </p>
             </div>
+
           </section>
         )}
 
         {/* DATE */}
+
         {latestDate && (
-          <section className="mt-6 rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8">
-            <p className="text-sm font-semibold uppercase tracking-wider text-[#e94f64]">
-              💕 You've made it this far
+          <section className="mb-8 rounded-3xl border border-[#f8dde2] bg-white p-7 shadow-sm">
+
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#e94f64]">
+              The Date
             </p>
 
-            <h2 className="mt-2 text-2xl font-bold text-[#171717]">
-              Your date
+            <h2 className="mt-1 text-2xl font-bold">
+              This is getting serious. 💕
             </h2>
 
             <div className="mt-5 rounded-2xl bg-[#fff8f5] p-5">
-              <p className="font-semibold text-[#171717]">
-                {new Date(
-                  latestDate.scheduledAt
-                ).toLocaleString()}
+
+              <p className="text-sm text-[#746f70]">
+                Scheduled for
               </p>
 
-              <p className="mt-1 text-sm text-[#746f70]">
-                {latestDate.type}
+              <p className="mt-1 text-lg font-bold">
+                {formatDate(latestDate.scheduledAt)}
+              </p>
+
+              <p className="mt-2 text-sm text-[#746f70]">
+                {latestDate.type === "ONLINE"
+                  ? "Online date 💻"
+                  : `${latestDate.type
+                      .charAt(0)
+                      .toUpperCase()}${latestDate.type
+                      .slice(1)
+                      .toLowerCase()} date`}
               </p>
 
               {latestDate.prompt && (
-                <div className="mt-4 border-t border-[#e8d9db] pt-4">
+                <div className="mt-4 rounded-xl border border-[#e8d9db] bg-white p-4">
+
                   <p className="text-xs font-semibold uppercase tracking-wider text-[#746f70]">
                     Your date prompt
                   </p>
 
-                  <p className="mt-1 text-sm text-[#171717]">
+                  <p className="mt-1 font-semibold">
                     {latestDate.prompt}
                   </p>
+
                 </div>
               )}
+
+              {latestDate.status === "SCHEDULED" &&
+                latestDate.meetingUrl && (
+                  <a
+                    href={latestDate.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex rounded-xl bg-[#e94f64] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    Join Online Date →
+                  </a>
+                )}
+
+              {latestDate.status === "COMPLETED" && (
+                <p className="mt-4 text-sm font-semibold text-[#e94f64]">
+                  ✓ Date completed
+                </p>
+              )}
+
             </div>
 
-            {latestDate.meetingUrl && (
-              <a
-                href={latestDate.meetingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-5 block rounded-2xl bg-[#e94f64] px-5 py-4 text-center font-semibold text-white transition hover:opacity-90"
-              >
-                Join your date →
-              </a>
-            )}
           </section>
         )}
 
-        {/* APPLICATION INFO */}
-        <section className="mt-6 rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8">
-          <h2 className="text-xl font-bold text-[#171717]">
-            Your application
-          </h2>
+        {/* APPLICATION DETAILS */}
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <InfoCard
-              label="Name"
-              value={`${candidate.firstName} ${
-                candidate.lastName ?? ""
-              }`}
-            />
+        <section className="rounded-3xl border border-[#e8d9db] bg-white p-7 shadow-sm">
 
-            <InfoCard
-              label="Location"
-              value={candidate.city}
-            />
+          <div className="mb-6">
 
-            <InfoCard
-              label="Relationship intent"
-              value={
-                candidate.relationshipIntent
-                  ? formatStatus(candidate.relationshipIntent)
-                  : "Not provided"
-              }
-            />
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#e94f64]">
+              Your application
+            </p>
 
-            <InfoCard
-              label="Application date"
-              value={new Date(
-                candidate.createdAt
-              ).toLocaleDateString()}
-            />
+            <h2 className="mt-1 text-2xl font-bold">
+              Candidate details
+            </h2>
+
           </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#746f70]">
+                Name
+              </p>
+              <p className="mt-1 font-semibold">
+                {candidate.firstName}{" "}
+                {candidate.lastName ?? ""}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#746f70]">
+                City
+              </p>
+              <p className="mt-1 font-semibold">
+                {candidate.city}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#746f70]">
+                Age
+              </p>
+              <p className="mt-1 font-semibold">
+                {candidate.age}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs uppercase tracking-wider text-[#746f70]">
+                Occupation
+              </p>
+              <p className="mt-1 font-semibold">
+                {candidate.occupation || "—"}
+              </p>
+            </div>
+
+          </div>
+
         </section>
 
         {/* FOOTER */}
-        <footer className="py-10 text-center">
-          <p className="text-sm text-[#746f70]">
-            boyfriend<span className="text-[#e94f64]">.</span> recruitment
-          </p>
 
-          <p className="mt-1 text-xs text-[#746f70]">
-            Serious recruitment. Questionable methodology.
-          </p>
-        </footer>
+        <div className="py-10 text-center">
+
+          <Link
+            href="/"
+            className="text-sm font-semibold text-[#e94f64] hover:underline"
+          >
+            ← Back to Boyfriend.co
+          </Link>
+
+        </div>
+
       </div>
     </main>
-  );
-}
-
-/* ----------------------------- */
-/* Helpers                       */
-/* ----------------------------- */
-
-function formatStatus(status: string) {
-  return status
-    .replaceAll("_", " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function InfoCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-[#fff8f5] p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-[#746f70]">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-semibold text-[#171717]">
-        {value}
-      </p>
-    </div>
   );
 }
