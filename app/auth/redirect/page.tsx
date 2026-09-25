@@ -26,7 +26,7 @@ export default async function AuthRedirectPage() {
   }
 
   // Admin → admin dashboard
-  const role = sessionClaims?.metadata?.role;
+  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
 
   if (role === "ADMIN") {
     redirect("/admin");

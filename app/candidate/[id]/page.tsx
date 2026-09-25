@@ -208,7 +208,7 @@ export default async function CandidatePage({
    * clerkUserId = null, so they can only be viewed by admins.
    * --------------------------------------------------------- */
 
-  const role = sessionClaims?.metadata?.role;
+  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
 
   const isAdmin = role === "ADMIN";
 

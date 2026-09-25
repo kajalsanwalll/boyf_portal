@@ -22,7 +22,7 @@ export default clerkMiddleware(async (auth, req) => {
     );
   }
 
-  const role = sessionClaims?.metadata?.role;
+  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
 
   // Logged in but not an admin
   if (role !== "ADMIN") {
