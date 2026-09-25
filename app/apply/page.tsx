@@ -16,10 +16,20 @@ const formSchema = z.object({
 
   email: z.string().email("Please enter a valid email."),
 
-  age: z.coerce
-    .number()
-    .min(18, "Applicants must be 18+.")
-    .max(99, "Please enter a valid age."),
+  // Keep age as a STRING inside the form.
+  // HTML inputs naturally produce strings.
+  age: z
+    .string()
+    .min(1, "Please enter your age.")
+    .refine((value) => {
+      const age = Number(value);
+
+      return (
+        Number.isInteger(age) &&
+        age >= 18 &&
+        age <= 99
+      );
+    }, "Please enter a valid age between 18 and 99."),
 
   city: z.string().min(2, "Please enter your city."),
 
@@ -29,7 +39,7 @@ const formSchema = z.object({
 
   occupation: z.string().optional(),
 
-  // Cloudinary URL gets stored here
+  // Cloudinary URL
   photoUrl: z.string().optional(),
 
   workoutFrequency: z.string().optional(),
@@ -45,7 +55,12 @@ const formSchema = z.object({
   petType: z.string().optional(),
 
   personality: z
-    .enum(["INTROVERT", "EXTROVERT", "AMBIVERT", "DEPENDS"])
+    .enum([
+      "INTROVERT",
+      "EXTROVERT",
+      "AMBIVERT",
+      "DEPENDS",
+    ])
     .optional(),
 
   conflictStyle: z.string().optional(),
@@ -87,22 +102,7 @@ const formSchema = z.object({
   anythingElse: z.string().optional(),
 });
 
-/*
- * Important:
- *
- * z.coerce.number() has an INPUT type of unknown,
- * but an OUTPUT type of number.
- *
- * Using z.infer<typeof formSchema> directly with useForm()
- * can therefore cause a production TypeScript error.
- *
- * We explicitly tell react-hook-form:
- *
- * Input  -> z.input<typeof formSchema>
- * Output -> z.output<typeof formSchema>
- */
-type FormInput = z.input<typeof formSchema>;
-type FormData = z.output<typeof formSchema>;
+type FormData = z.infer<typeof formSchema>;
 
 const steps = [
   "Basic Info",
@@ -116,13 +116,14 @@ export default function ApplyPage() {
   const router = useRouter();
 
   const [step, setStep] = useState(0);
+
   const [submitting, setSubmitting] = useState(false);
 
-  const [photoPreview, setPhotoPreview] = useState<string | null>(
-    null
-  );
+  const [photoPreview, setPhotoPreview] =
+    useState<string | null>(null);
 
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] =
+    useState(false);
 
   const [photoError, setPhotoError] = useState("");
 
@@ -133,11 +134,48 @@ export default function ApplyPage() {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<FormInput, any, FormData>({
+  } = useForm<FormData>({
     resolver: zodResolver(formSchema),
 
     defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      age: "",
+      city: "",
+      height: "",
+      zodiac: "",
+      occupation: "",
+      photoUrl: "",
+
+      workoutFrequency: "",
+      diet: "",
+      weekendPreference: "",
+      travels: "",
+
       hasPets: false,
+      petType: "",
+
+      personality: undefined,
+
+      conflictStyle: "",
+      communication: "",
+      friendsDescribe: "",
+
+      relationshipIntent: undefined,
+
+      loveLanguages: "",
+      values: "",
+      longTermGoals: "",
+      relationshipNeeds: "",
+
+      fryProtocol: "",
+      fineResponse: "",
+      readResponse: "",
+      toiletProtocol: "",
+      whyGoodBoyfriend: "",
+      whatMakesDifferent: "",
+      anythingElse: "",
     },
   });
 
@@ -169,17 +207,19 @@ export default function ApplyPage() {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setPhotoError("Image must be smaller than 5MB.");
+      setPhotoError(
+        "Image must be smaller than 5MB."
+      );
 
       event.target.value = "";
 
       return;
     }
 
-    // Local preview
     const previewUrl = URL.createObjectURL(file);
 
     setPhotoPreview(previewUrl);
+
     setUploadingPhoto(true);
 
     try {
@@ -196,11 +236,11 @@ export default function ApplyPage() {
 
       if (!response.ok) {
         throw new Error(
-          result.error || "Failed to upload photo."
+          result.error ||
+            "Failed to upload photo."
         );
       }
 
-      // Save Cloudinary URL into react-hook-form
       setValue("photoUrl", result.url, {
         shouldValidate: true,
         shouldDirty: true,
@@ -226,6 +266,7 @@ export default function ApplyPage() {
 
   function removePhoto() {
     setPhotoPreview(null);
+
     setPhotoError("");
 
     setValue("photoUrl", "", {
@@ -238,7 +279,7 @@ export default function ApplyPage() {
       return;
     }
 
-    const fieldsByStep: (keyof FormInput)[][] = [
+    const fieldsByStep: (keyof FormData)[][] = [
       ["firstName", "email", "age", "city"],
       [],
       [],
@@ -260,10 +301,14 @@ export default function ApplyPage() {
   }
 
   function previousStep() {
-    setStep((current) => Math.max(current - 1, 0));
+    setStep((current) =>
+      Math.max(current - 1, 0)
+    );
   }
 
-  async function submitApplication(data: FormData) {
+  async function submitApplication(
+    data: FormData
+  ) {
     if (uploadingPhoto) {
       alert(
         "Please wait for your photo to finish uploading."
@@ -275,6 +320,15 @@ export default function ApplyPage() {
     setSubmitting(true);
 
     try {
+      /*
+       * Convert age from the form string into the
+       * number expected by Prisma/API.
+       */
+      const payload = {
+        ...data,
+        age: Number(data.age),
+      };
+
       const response = await fetch("/api/apply", {
         method: "POST",
 
@@ -282,7 +336,7 @@ export default function ApplyPage() {
           "Content-Type": "application/json",
         },
 
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -296,7 +350,9 @@ export default function ApplyPage() {
         return;
       }
 
-      router.push(`/apply/success?id=${result.id}`);
+      router.push(
+        `/apply/success?id=${result.id}`
+      );
     } catch (error) {
       console.error(error);
 
@@ -331,8 +387,9 @@ export default function ApplyPage() {
           </h1>
 
           <p className="mx-auto mt-3 max-w-xl text-[#746f70]">
-            Fill out the application honestly. Our recruitment
-            department is extremely serious about this.
+            Fill out the application honestly. Our
+            recruitment department is extremely serious
+            about this.
           </p>
         </div>
 
@@ -384,11 +441,12 @@ export default function ApplyPage() {
           onSubmit={handleSubmit(submitApplication)}
           onKeyDown={(event) => {
             /*
-             * Prevent accidental implicit form submission
-             * when pressing Enter inside a normal input.
+             * Prevent Enter from accidentally submitting
+             * normal inputs.
              *
-             * Textareas are intentionally excluded so users
-             * can press Enter while writing their answers.
+             * Textareas are intentionally allowed to receive
+             * Enter so Important Questions can be written
+             * normally.
              */
             if (
               event.key === "Enter" &&
@@ -447,6 +505,8 @@ export default function ApplyPage() {
                     {...register("age")}
                     type="number"
                     placeholder="24"
+                    min="18"
+                    max="99"
                     className="input"
                   />
                 </Field>
@@ -485,7 +545,6 @@ export default function ApplyPage() {
                     className="input"
                   />
                 </Field>
-
               </div>
 
               {/* PHOTO UPLOAD */}
@@ -495,8 +554,8 @@ export default function ApplyPage() {
                 </label>
 
                 <p className="mt-1 text-xs text-[#746f70]">
-                  Give the recruitment team something to work with.
-                  JPG, PNG or WEBP · max 5MB
+                  Give the recruitment team something to
+                  work with. JPG, PNG or WEBP · max 5MB
                 </p>
 
                 {!photoPreview ? (
@@ -548,7 +607,8 @@ export default function ApplyPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-[#746f70]">
-                              Your photo has been securely uploaded.
+                              Your photo has been securely
+                              uploaded.
                             </p>
 
                             <div className="mt-3 flex gap-2">
@@ -676,7 +736,6 @@ export default function ApplyPage() {
                     />
                   </Field>
                 )}
-
               </div>
             </StepContainer>
           )}
@@ -743,7 +802,6 @@ export default function ApplyPage() {
                     className="textarea"
                   />
                 </Field>
-
               </div>
             </StepContainer>
           )}
@@ -824,7 +882,6 @@ export default function ApplyPage() {
                     className="textarea"
                   />
                 </Field>
-
               </div>
             </StepContainer>
           )}
@@ -845,7 +902,7 @@ export default function ApplyPage() {
 
                 <Question
                   emoji="🙂"
-                  question={'Your partner says "I\'m fine." What do you do?'}
+                  question={`Your partner says "I'm fine." What do you do?`}
                   register={register("fineResponse")}
                 />
 
@@ -881,12 +938,12 @@ export default function ApplyPage() {
 
               </div>
 
-              {/* IMPORTANT: This is NOT a submit button */}
               <div className="mt-6 rounded-xl border border-[#f8dde2] bg-[#fff8f5] p-4">
                 <p className="text-xs leading-5 text-[#746f70]">
-                  💌 Take your time with these. Your answers are
-                  saved as you type and will only be submitted when
-                  you click the final button below.
+                  💌 Take your time with these. Your answers
+                  are saved as you type and will only be
+                  submitted when you click the final button
+                  below.
                 </p>
               </div>
             </StepContainer>
@@ -916,7 +973,9 @@ export default function ApplyPage() {
             ) : (
               <button
                 type="submit"
-                disabled={submitting || uploadingPhoto}
+                disabled={
+                  submitting || uploadingPhoto
+                }
                 className="rounded-xl bg-[#e94f64] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 {submitting
@@ -930,8 +989,8 @@ export default function ApplyPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-[#746f70]">
-          By applying, you acknowledge that this is an extremely
-          unserious recruitment process.
+          By applying, you acknowledge that this is an
+          extremely unserious recruitment process.
         </p>
       </div>
 
