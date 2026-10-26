@@ -21,7 +21,7 @@ function SuccessContent() {
           </p>
 
           <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-extrabold tracking-tight md:text-5xl">
-            You're officially in the pipeline.
+            You are officially in the pipeline.
           </h1>
 
           <p className="mx-auto mt-5 max-w-lg leading-7 text-[#6b5566]">

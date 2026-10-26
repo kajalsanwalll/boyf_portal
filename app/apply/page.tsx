@@ -2,18 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useForm,
-  type UseFormRegisterReturn,
-} from "react-hook-form";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Link from "next/link";
 
 const formSchema = z.object({
   firstName: z.string().min(2, "Please enter your first name."),
-
   lastName: z.string().optional(),
-
   email: z.string().email("Please enter a valid email."),
 
   // Keep age as a STRING inside the form.
@@ -23,82 +19,47 @@ const formSchema = z.object({
     .min(1, "Please enter your age.")
     .refine((value) => {
       const age = Number(value);
-
-      return (
-        Number.isInteger(age) &&
-        age >= 18 &&
-        age <= 99
-      );
+      return Number.isInteger(age) && age >= 18 && age <= 99;
     }, "Please enter a valid age between 18 and 99."),
 
   city: z.string().min(2, "Please enter your city."),
-
   height: z.string().optional(),
-
   zodiac: z.string().optional(),
-
   occupation: z.string().optional(),
 
   // Cloudinary URL
   photoUrl: z.string().optional(),
 
   workoutFrequency: z.string().optional(),
-
   diet: z.string().optional(),
-
   weekendPreference: z.string().optional(),
-
   travels: z.string().optional(),
-
   hasPets: z.boolean().optional(),
-
   petType: z.string().optional(),
 
   personality: z
-    .enum([
-      "INTROVERT",
-      "EXTROVERT",
-      "AMBIVERT",
-      "DEPENDS",
-    ])
+    .enum(["INTROVERT", "EXTROVERT", "AMBIVERT", "DEPENDS"])
     .optional(),
 
   conflictStyle: z.string().optional(),
-
   communication: z.string().optional(),
-
   friendsDescribe: z.string().optional(),
 
   relationshipIntent: z
-    .enum([
-      "CASUAL",
-      "SERIOUS",
-      "OPEN_TO_SEEING",
-      "MARRIAGE",
-      "FOR_THE_PLOT",
-    ])
+    .enum(["CASUAL", "SERIOUS", "OPEN_TO_SEEING", "MARRIAGE", "FOR_THE_PLOT"])
     .optional(),
 
   loveLanguages: z.string().optional(),
-
   values: z.string().optional(),
-
   longTermGoals: z.string().optional(),
-
   relationshipNeeds: z.string().optional(),
 
   fryProtocol: z.string().optional(),
-
   fineResponse: z.string().optional(),
-
   readResponse: z.string().optional(),
-
   toiletProtocol: z.string().optional(),
-
   whyGoodBoyfriend: z.string().optional(),
-
   whatMakesDifferent: z.string().optional(),
-
   anythingElse: z.string().optional(),
 });
 
@@ -116,15 +77,9 @@ export default function ApplyPage() {
   const router = useRouter();
 
   const [step, setStep] = useState(0);
-
   const [submitting, setSubmitting] = useState(false);
-
-  const [photoPreview, setPhotoPreview] =
-    useState<string | null>(null);
-
-  const [uploadingPhoto, setUploadingPhoto] =
-    useState(false);
-
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState("");
 
   const {
@@ -180,6 +135,7 @@ export default function ApplyPage() {
   });
 
   const hasPets = watch("hasPets");
+  const isLastStep = step === steps.length - 1;
 
   async function handlePhotoUpload(
     event: React.ChangeEvent<HTMLInputElement>
@@ -190,41 +146,27 @@ export default function ApplyPage() {
 
     setPhotoError("");
 
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-    ];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
-      setPhotoError(
-        "Please upload a JPG, PNG, or WEBP image."
-      );
-
+      setPhotoError("Please upload a JPG, PNG, or WEBP image.");
       event.target.value = "";
-
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setPhotoError(
-        "Image must be smaller than 5MB."
-      );
-
+      setPhotoError("Image must be smaller than 5MB.");
       event.target.value = "";
-
       return;
     }
 
     const previewUrl = URL.createObjectURL(file);
 
     setPhotoPreview(previewUrl);
-
     setUploadingPhoto(true);
 
     try {
       const formData = new FormData();
-
       formData.append("file", file);
 
       const response = await fetch("/api/upload", {
@@ -235,10 +177,7 @@ export default function ApplyPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.error ||
-            "Failed to upload photo."
-        );
+        throw new Error(result.error || "Failed to upload photo.");
       }
 
       setValue("photoUrl", result.url, {
@@ -249,33 +188,25 @@ export default function ApplyPage() {
       console.error(error);
 
       setPhotoError(
-        error instanceof Error
-          ? error.message
-          : "Failed to upload photo."
+        error instanceof Error ? error.message : "Failed to upload photo."
       );
 
       setPhotoPreview(null);
-
       setValue("photoUrl", "");
     } finally {
       setUploadingPhoto(false);
-
       event.target.value = "";
     }
   }
 
   function removePhoto() {
     setPhotoPreview(null);
-
     setPhotoError("");
-
-    setValue("photoUrl", "", {
-      shouldDirty: true,
-    });
+    setValue("photoUrl", "", { shouldDirty: true });
   }
 
   async function nextStep() {
-    if (step >= steps.length - 1) {
+    if (isLastStep) {
       return;
     }
 
@@ -301,19 +232,12 @@ export default function ApplyPage() {
   }
 
   function previousStep() {
-    setStep((current) =>
-      Math.max(current - 1, 0)
-    );
+    setStep((current) => Math.max(current - 1, 0));
   }
 
-  async function submitApplication(
-    data: FormData
-  ) {
+  async function submitApplication(data: FormData) {
     if (uploadingPhoto) {
-      alert(
-        "Please wait for your photo to finish uploading."
-      );
-
+      alert("Please wait for your photo to finish uploading.");
       return;
     }
 
@@ -331,34 +255,23 @@ export default function ApplyPage() {
 
       const response = await fetch("/api/apply", {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json",
         },
-
         body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        alert(
-          result.error ||
-            "Failed to submit application."
-        );
-
+        alert(result.error || "Failed to submit application.");
         return;
       }
 
-      router.push(
-        `/apply/success?id=${result.id}`
-      );
+      router.push(`/apply/success?id=${result.id}`);
     } catch (error) {
       console.error(error);
-
-      alert(
-        "Something went wrong while submitting."
-      );
+      alert("Something went wrong while submitting.");
     } finally {
       setSubmitting(false);
     }
@@ -367,16 +280,12 @@ export default function ApplyPage() {
   return (
     <main className="min-h-screen bg-[#fff8f5] px-4 py-8 md:px-8">
       <div className="mx-auto max-w-3xl">
-
         {/* HEADER */}
         <div className="mb-8 text-center">
-          <a
-            href="/"
-            className="text-2xl font-bold text-[#171717]"
-          >
+          <Link href="/" className="text-2xl font-bold text-[#171717]">
             boyfriend
             <span className="text-[#e94f64]">.</span>
-          </a>
+          </Link>
 
           <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-[#e94f64]">
             Applications are open
@@ -387,9 +296,8 @@ export default function ApplyPage() {
           </h1>
 
           <p className="mx-auto mt-3 max-w-xl text-[#746f70]">
-            Fill out the application honestly. Our
-            recruitment department is extremely serious
-            about this.
+            Fill out the application honestly. Our recruitment department is
+            extremely serious about this.
           </p>
         </div>
 
@@ -397,10 +305,7 @@ export default function ApplyPage() {
         <div className="mb-6 rounded-2xl border border-[#e8d9db] bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-2">
             {steps.map((label, index) => (
-              <div
-                key={label}
-                className="flex flex-1 items-center gap-2"
-              >
+              <div key={label} className="flex flex-1 items-center gap-2">
                 <div
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                     index <= step
@@ -413,9 +318,7 @@ export default function ApplyPage() {
 
                 <span
                   className={`hidden text-xs font-semibold sm:block ${
-                    index === step
-                      ? "text-[#e94f64]"
-                      : "text-[#746f70]"
+                    index === step ? "text-[#e94f64]" : "text-[#746f70]"
                   }`}
                 >
                   {label}
@@ -428,9 +331,7 @@ export default function ApplyPage() {
             <div
               className="h-full rounded-full bg-[#e94f64] transition-all"
               style={{
-                width: `${
-                  ((step + 1) / steps.length) * 100
-                }%`,
+                width: `${((step + 1) / steps.length) * 100}%`,
               }}
             />
           </div>
@@ -438,7 +339,18 @@ export default function ApplyPage() {
 
         {/* FORM */}
         <form
-          onSubmit={handleSubmit(submitApplication)}
+          onSubmit={(event) => {
+            /*
+             * Safety net: never submit unless we're actually on the
+             * last step. Stops stray submits from earlier steps.
+             */
+            if (!isLastStep) {
+              event.preventDefault();
+              return;
+            }
+
+            handleSubmit(submitApplication)(event);
+          }}
           onKeyDown={(event) => {
             /*
              * Prevent Enter from accidentally submitting
@@ -457,7 +369,6 @@ export default function ApplyPage() {
           }}
           className="rounded-3xl border border-[#e8d9db] bg-white p-6 shadow-sm md:p-8"
         >
-
           {/* STEP 1 */}
           {step === 0 && (
             <StepContainer
@@ -465,11 +376,7 @@ export default function ApplyPage() {
               subtitle="The boring HR stuff. We promise it gets better."
             >
               <div className="grid gap-5 sm:grid-cols-2">
-
-                <Field
-                  label="First name *"
-                  error={errors.firstName?.message}
-                >
+                <Field label="First name *" error={errors.firstName?.message}>
                   <input
                     {...register("firstName")}
                     placeholder="Arjun"
@@ -485,10 +392,7 @@ export default function ApplyPage() {
                   />
                 </Field>
 
-                <Field
-                  label="Email *"
-                  error={errors.email?.message}
-                >
+                <Field label="Email *" error={errors.email?.message}>
                   <input
                     {...register("email")}
                     type="email"
@@ -497,10 +401,7 @@ export default function ApplyPage() {
                   />
                 </Field>
 
-                <Field
-                  label="Age *"
-                  error={errors.age?.message}
-                >
+                <Field label="Age *" error={errors.age?.message}>
                   <input
                     {...register("age")}
                     type="number"
@@ -511,10 +412,7 @@ export default function ApplyPage() {
                   />
                 </Field>
 
-                <Field
-                  label="City *"
-                  error={errors.city?.message}
-                >
+                <Field label="City *" error={errors.city?.message}>
                   <input
                     {...register("city")}
                     placeholder="Mumbai"
@@ -554,15 +452,13 @@ export default function ApplyPage() {
                 </label>
 
                 <p className="mt-1 text-xs text-[#746f70]">
-                  Give the recruitment team something to
-                  work with. JPG, PNG or WEBP · max 5MB
+                  Give the recruitment team something to work with. JPG, PNG or
+                  WEBP · max 5MB
                 </p>
 
                 {!photoPreview ? (
                   <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#e8d9db] bg-[#fff8f5] px-6 py-10 text-center transition hover:border-[#e94f64] hover:bg-[#fff1f3]">
-                    <span className="text-3xl">
-                      📸
-                    </span>
+                    <span className="text-3xl">📸</span>
 
                     <span className="mt-3 text-sm font-bold text-[#171717]">
                       Choose a photo
@@ -582,7 +478,7 @@ export default function ApplyPage() {
                 ) : (
                   <div className="mt-3 overflow-hidden rounded-2xl border border-[#e8d9db] bg-[#fff8f5] p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={photoPreview}
                         alt="Profile preview"
@@ -607,14 +503,12 @@ export default function ApplyPage() {
                             </p>
 
                             <p className="mt-1 text-xs text-[#746f70]">
-                              Your photo has been securely
-                              uploaded.
+                              Your photo has been securely uploaded.
                             </p>
 
                             <div className="mt-3 flex gap-2">
                               <label className="cursor-pointer rounded-lg border border-[#e8d9db] bg-white px-3 py-2 text-xs font-semibold transition hover:border-[#e94f64]">
                                 Replace
-
                                 <input
                                   type="file"
                                   accept="image/jpeg,image/png,image/webp"
@@ -654,7 +548,6 @@ export default function ApplyPage() {
               subtitle="We need to know what we're signing up for."
             >
               <div className="space-y-5">
-
                 <Field label="How often do you work out?">
                   <input
                     {...register("workoutFrequency")}
@@ -696,9 +589,7 @@ export default function ApplyPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        setValue("hasPets", true, {
-                          shouldDirty: true,
-                        })
+                        setValue("hasPets", true, { shouldDirty: true })
                       }
                       className={`rounded-xl px-5 py-3 text-sm font-semibold ${
                         hasPets
@@ -712,9 +603,7 @@ export default function ApplyPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        setValue("hasPets", false, {
-                          shouldDirty: true,
-                        })
+                        setValue("hasPets", false, { shouldDirty: true })
                       }
                       className={`rounded-xl px-5 py-3 text-sm font-semibold ${
                         hasPets === false
@@ -747,7 +636,6 @@ export default function ApplyPage() {
               subtitle="There are no wrong answers. Probably."
             >
               <div className="space-y-6">
-
                 <div>
                   <label className="block text-sm font-semibold text-[#171717]">
                     How would you describe yourself?
@@ -760,10 +648,7 @@ export default function ApplyPage() {
                       ["AMBIVERT", "Ambivert 🌓"],
                       ["DEPENDS", "Depends™"],
                     ].map(([value, label]) => (
-                      <label
-                        key={value}
-                        className="cursor-pointer"
-                      >
+                      <label key={value} className="cursor-pointer">
                         <input
                           {...register("personality")}
                           type="radio"
@@ -813,7 +698,6 @@ export default function ApplyPage() {
               subtitle="Okay, now we're getting serious."
             >
               <div className="space-y-6">
-
                 <div>
                   <label className="block text-sm font-semibold text-[#171717]">
                     What are you looking for?
@@ -823,15 +707,9 @@ export default function ApplyPage() {
                     {[
                       ["CASUAL", "Something casual"],
                       ["SERIOUS", "A serious relationship"],
-                      [
-                        "OPEN_TO_SEEING",
-                        "Open to seeing where it goes",
-                      ],
+                      ["OPEN_TO_SEEING", "Open to seeing where it goes"],
                       ["MARRIAGE", "Marriage"],
-                      [
-                        "FOR_THE_PLOT",
-                        "Honestly? For the plot.",
-                      ],
+                      ["FOR_THE_PLOT", "Honestly? For the plot."],
                     ].map(([value, label]) => (
                       <label
                         key={value}
@@ -843,9 +721,7 @@ export default function ApplyPage() {
                           value={value}
                         />
 
-                        <span className="text-sm font-medium">
-                          {label}
-                        </span>
+                        <span className="text-sm font-medium">{label}</span>
                       </label>
                     ))}
                   </div>
@@ -893,7 +769,6 @@ export default function ApplyPage() {
               subtitle="This is where careers are made or destroyed."
             >
               <div className="space-y-6">
-
                 <Question
                   emoji="🍟"
                   question="There is one fry left. What happens?"
@@ -935,15 +810,12 @@ export default function ApplyPage() {
                   question="Anything else the recruitment team should know?"
                   register={register("anythingElse")}
                 />
-
               </div>
 
               <div className="mt-6 rounded-xl border border-[#f8dde2] bg-[#fff8f5] p-4">
                 <p className="text-xs leading-5 text-[#746f70]">
-                  💌 Take your time with these. Your answers
-                  are saved as you type and will only be
-                  submitted when you click the final button
-                  below.
+                  💌 Take your time with these. Your answers will only be
+                  submitted when you click the final button below.
                 </p>
               </div>
             </StepContainer>
@@ -951,7 +823,6 @@ export default function ApplyPage() {
 
           {/* NAVIGATION */}
           <div className="mt-8 flex items-center justify-between border-t border-[#e8d9db] pt-6">
-
             <button
               type="button"
               onClick={previousStep}
@@ -961,8 +832,15 @@ export default function ApplyPage() {
               ← Back
             </button>
 
-            {step < steps.length - 1 ? (
+            {/*
+             * Each button has its own key so React swaps the DOM node
+             * instead of reusing it. Without this, the "Continue" button
+             * turns into the "Submit" button mid-click and the browser
+             * submits the form as soon as you reach the last step.
+             */}
+            {!isLastStep ? (
               <button
+                key="next-button"
                 type="button"
                 onClick={nextStep}
                 disabled={submitting}
@@ -972,10 +850,9 @@ export default function ApplyPage() {
               </button>
             ) : (
               <button
+                key="submit-button"
                 type="submit"
-                disabled={
-                  submitting || uploadingPhoto
-                }
+                disabled={submitting || uploadingPhoto}
                 className="rounded-xl bg-[#e94f64] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 {submitting
@@ -989,8 +866,8 @@ export default function ApplyPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-[#746f70]">
-          By applying, you acknowledge that this is an
-          extremely unserious recruitment process.
+          By applying, you acknowledge that this is an extremely unserious
+          recruitment process.
         </p>
       </div>
 
@@ -1047,9 +924,7 @@ function StepContainer({
         {title}
       </h2>
 
-      <p className="mt-2 mb-7 text-sm text-[#746f70]">
-        {subtitle}
-      </p>
+      <p className="mb-7 mt-2 text-sm text-[#746f70]">{subtitle}</p>
 
       {children}
     </div>
@@ -1074,9 +949,7 @@ function Field({
       {children}
 
       {error && (
-        <p className="mt-1 text-xs font-medium text-[#e94f64]">
-          {error}
-        </p>
+        <p className="mt-1 text-xs font-medium text-[#e94f64]">{error}</p>
       )}
     </div>
   );
