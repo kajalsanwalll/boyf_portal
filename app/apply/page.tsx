@@ -57,7 +57,7 @@ const formSchema = z.object({
   fryProtocol: z.string().optional(),
   fineResponse: z.string().optional(),
   readResponse: z.string().optional(),
-  toiletProtocol: z.string().optional(),
+  redFlag: z.string().optional(),
   whyGoodBoyfriend: z.string().optional(),
   whatMakesDifferent: z.string().optional(),
   anythingElse: z.string().optional(),
@@ -127,7 +127,7 @@ export default function ApplyPage() {
       fryProtocol: "",
       fineResponse: "",
       readResponse: "",
-      toiletProtocol: "",
+      redFlag: "",
       whyGoodBoyfriend: "",
       whatMakesDifferent: "",
       anythingElse: "",
@@ -788,9 +788,11 @@ export default function ApplyPage() {
                 />
 
                 <Question
-                  emoji="🚽"
-                  question="What's your toilet seat policy?"
-                  register={register("toiletProtocol")}
+                  emoji="🚩"
+                  question="What's one red flag about yourself that you're willing to disclose upfront?
+
+"
+                  register={register("redFlag")}
                 />
 
                 <Question
