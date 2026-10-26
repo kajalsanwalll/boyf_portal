@@ -436,7 +436,7 @@ export default function Home() {
       </section>
 
       {/* CTA + FOOTER */}
-      <section className="flex min-h-svh snap-start flex-col bg-[#e94f64] text-white">
+      <section className="flex min-h-svh snap-start flex-col bg-[#e29da6] text-white">
         <div className="flex flex-1 items-center justify-center px-5 pb-8 pt-28 text-center sm:px-8">
           <div className="mx-auto max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/65">
