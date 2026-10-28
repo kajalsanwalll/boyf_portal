@@ -174,10 +174,10 @@ export default function Home() {
           >
             <p className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-[#eadcdf] bg-white py-1.5 pl-3 pr-4 text-sm font-semibold text-[#746f70]">
               <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-600 opacity-60 motion-reduce:animate-none" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-800" />
               </span>
-              Applications are open
+              Applications are closed!
             </p>
 
             <h1
